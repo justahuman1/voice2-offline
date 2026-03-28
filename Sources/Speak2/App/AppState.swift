@@ -1,4 +1,5 @@
 import Foundation
+import Speak2Kit
 import SwiftUI
 
 enum RecordingState {
@@ -16,20 +17,6 @@ enum EngineLoadingState: Equatable {
     case downloaded
     case loading
     case loaded
-}
-
-enum ParakeetVersion: String, CaseIterable {
-    case v2
-    case v3
-}
-
-enum GlowColor: String, CaseIterable {
-    case cyan
-    case purple
-    case green
-    case pink
-    case orange
-    case system
 }
 
 @Observable

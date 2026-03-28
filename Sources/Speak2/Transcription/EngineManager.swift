@@ -1,5 +1,6 @@
 import FluidAudio
 import Foundation
+import Speak2Kit
 
 @MainActor
 final class EngineManager {

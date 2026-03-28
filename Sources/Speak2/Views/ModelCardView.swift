@@ -1,3 +1,4 @@
+import Speak2Kit
 import SwiftUI
 
 struct ModelMetadata {

@@ -1,5 +1,6 @@
 import FluidAudio
 import Foundation
+import Speak2Kit
 
 final class ParakeetEngine: TranscriptionEngine {
     private let version: ParakeetVersion

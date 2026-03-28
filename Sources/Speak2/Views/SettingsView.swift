@@ -1,4 +1,5 @@
 import KeyboardShortcuts
+import Speak2Kit
 import SwiftUI
 
 // MARK: - ShortcutRecorder (NSViewRepresentable wrapper)

@@ -1,5 +1,6 @@
-import SwiftUI
 import AppKit
+import Speak2Kit
+import SwiftUI
 
 struct HistoryView: View {
     var history: TranscriptionHistory = .shared

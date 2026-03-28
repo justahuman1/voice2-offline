@@ -1,10 +1,5 @@
 import Foundation
-
-struct TranscriptionEntry: Codable, Identifiable {
-    let id: UUID
-    let text: String
-    let timestamp: Date
-}
+import Speak2Kit
 
 @Observable
 @MainActor
