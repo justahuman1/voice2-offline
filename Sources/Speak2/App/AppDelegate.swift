@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var autoPasteMenuItem: NSMenuItem!
     let appState = AppState()
+    private lazy var settingsWindow = SettingsWindow()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -43,11 +44,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
-        // TODO: open settings window
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow.show()
     }
 
     @objc private func openHistory() {
-        // TODO: open history window
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow.showHistoryTab()
     }
 
     @objc private func toggleAutoPaste() {
