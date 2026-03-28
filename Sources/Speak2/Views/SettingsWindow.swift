@@ -16,22 +16,24 @@ final class SettingsTabState {
 
 struct SettingsContentView: View {
     @Bindable var tabState: SettingsTabState
+    var appState: AppState
+    var engineManager: EngineManager
 
     var body: some View {
         TabView(selection: $tabState.selectedTab) {
-            Text("Settings")
+            SettingsView(appState: appState, engineManager: engineManager)
                 .tabItem { Label("Settings", systemImage: "gear") }
                 .tag(SettingsTab.settings)
 
-            Text("History")
+            HistoryView()
                 .tabItem { Label("History", systemImage: "clock") }
                 .tag(SettingsTab.history)
 
-            Text("Statistics")
+            StatsView()
                 .tabItem { Label("Statistics", systemImage: "chart.bar") }
                 .tag(SettingsTab.statistics)
 
-            Text("Audio Devices")
+            AudioDevicesView()
                 .tabItem { Label("Audio Devices", systemImage: "speaker.wave.2") }
                 .tag(SettingsTab.audioDevices)
         }
@@ -44,7 +46,7 @@ final class SettingsWindow {
     private let window: NSWindow
     private let tabState = SettingsTabState()
 
-    init() {
+    init(appState: AppState, engineManager: EngineManager) {
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 850, height: 600),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -56,7 +58,11 @@ final class SettingsWindow {
         window.contentMinSize = NSSize(width: 600, height: 400)
         window.center()
 
-        let hostingView = NSHostingView(rootView: SettingsContentView(tabState: tabState))
+        let hostingView = NSHostingView(rootView: SettingsContentView(
+            tabState: tabState,
+            appState: appState,
+            engineManager: engineManager
+        ))
         window.contentView = hostingView
     }
 

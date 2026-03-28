@@ -5,7 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var autoPasteMenuItem: NSMenuItem!
     let appState = AppState()
-    private lazy var settingsWindow = SettingsWindow()
+    private lazy var settingsWindow = SettingsWindow(appState: appState, engineManager: engineManager)
 
     private let audioRecorder = AudioRecorder()
     private lazy var engineManager = EngineManager(appState: appState)
@@ -28,6 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             PasteService.pasteAtCursor(text, autoPasteEnabled: true)
         }
 
+        PasteService.onProblematicApp = { [weak self] in self?.openHistory() }
+        TranscriptionHistory.shared.load()
         engineManager.loadModel(version: appState.selectedVersion)
     }
 
@@ -104,9 +106,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             glowOverlay.show(state: .processing)
 
             do {
-                let text = try await engineManager.transcribe(audioSamples: samples)
+                let rawText = try await engineManager.transcribe(audioSamples: samples)
+                let text = TextReplacements.shared.processText(rawText)
                 appState.recordingState = .done
                 appState.recentTranscription = text
+                TranscriptionHistory.shared.addEntry(text)
                 glowOverlay.show(state: .done)
                 NotificationService.shared.showTranscriptionComplete(text: text)
                 PasteService.pasteAtCursor(text, autoPasteEnabled: appState.autoPasteEnabled)
