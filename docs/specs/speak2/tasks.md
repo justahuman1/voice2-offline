@@ -69,13 +69,13 @@
   - [x] 8.6 On startup: load previously selected version from UserDefaults
     - _Acceptance: version switching works, state updates correctly, memory freed on unload_
 
-- [ ] 9. Wire recording → transcription flow
-  - [ ] 9.1 In AppDelegate: on toggle hotkey, implement re-entry guards — if idle → start; if recording → stop + process; if processing → ignore; if transient (.done/.error/.cancelled) → cancel timer + start recording
-  - [ ] 9.2 On stopRecording returns buffer: set .processing, call EngineManager.transcribe(), on success set .done, on failure set .error
-  - [ ] 9.3 On stopRecording returns nil (silence): set .cancelled, show notification
-  - [ ] 9.4 On escape: call cancelRecording(), set .cancelled
-  - [ ] 9.5 Wire AudioRecorder level updates → AppState.audioLevel → GlowOverlay.updateLevel()
-  - [ ] 9.6 Add transient state timers: .done/.error → .idle after 0.6s, .cancelled → .idle after 0.3s
+- [x] 9. Wire recording → transcription flow
+  - [x] 9.1 In AppDelegate: on toggle hotkey, implement re-entry guards — if idle → start; if recording → stop + process; if processing → ignore; if transient (.done/.error/.cancelled) → cancel timer + start recording
+  - [x] 9.2 On stopRecording returns buffer: set .processing, call EngineManager.transcribe(), on success set .done, on failure set .error
+  - [x] 9.3 On stopRecording returns nil (silence): set .cancelled, show notification
+  - [x] 9.4 On escape: call cancelRecording(), set .cancelled
+  - [x] 9.5 Wire AudioRecorder level updates → AppState.audioLevel → GlowOverlay.updateLevel()
+  - [x] 9.6 Add transient state timers: .done/.error → .idle after 0.6s, .cancelled → .idle after 0.3s
     - _Acceptance: end-to-end recording → transcription works, glow transitions through all states, silence/cancel handled_
 
 ## Phase 3: Integration
@@ -101,12 +101,12 @@
   - [x] 12.4 `reloadConfig()` method to hot-reload from disk
     - _Acceptance: text replacements applied correctly, quote stripping works for all 4 types, bullet cleanup preserves indentation_
 
-- [ ] 13. End-to-end integration
-  - [ ] 13.1 Wire PasteService into transcription completion flow
-  - [ ] 13.2 Wire TextReplacements: apply processText() before pasting
-  - [ ] 13.3 Wire NotificationService into all state transitions
-  - [ ] 13.4 Wire TranscriptionHistory.addEntry() on successful transcription
-  - [ ] 13.5 Wire Cmd+Opt+V → paste last transcription from history
+- [x] 13. End-to-end integration
+  - [x] 13.1 Wire PasteService into transcription completion flow
+  - [x] 13.2 Wire TextReplacements: apply processText() before pasting
+  - [x] 13.3 Wire NotificationService into all state transitions
+  - [x] 13.4 Wire TranscriptionHistory.addEntry() on successful transcription
+  - [x] 13.5 Wire Cmd+Opt+V → paste last transcription from history
     - _Acceptance: full flow works: hotkey → record → glow → transcribe → text-replace → paste → notify → history saved_
 
 ## Phase 4: UI
