@@ -14,6 +14,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", exact: "1.8.0"),
         .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.13.2"),
+        .package(url: "https://github.com/swiftlang/swift-testing.git", from: "0.12.0"),
     ],
     targets: [
         .executableTarget(
@@ -31,7 +32,10 @@ let package = Package(
         ),
         .testTarget(
             name: "Speak2KitTests",
-            dependencies: ["Speak2Kit"],
+            dependencies: [
+                "Speak2Kit",
+                .product(name: "Testing", package: "swift-testing"),
+            ],
             path: "Tests/Speak2KitTests"
         ),
     ]
