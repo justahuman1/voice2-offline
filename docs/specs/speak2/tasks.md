@@ -11,62 +11,62 @@
   - [x] 1.6 Write placeholder `README.md`
     - _Acceptance: `swift build` succeeds with empty main.swift_
 
-- [ ] 2. App bootstrap + menu bar
-  - [ ] 2.1 Write `main.swift`: `NSApplication.shared`, create AppDelegate, `setActivationPolicy(.accessory)`, `app.run()`
-  - [ ] 2.2 Write `AppDelegate.swift`: `NSStatusItem` with waveform icon, menu with "Settings...", "View History...", separator, "Auto-Paste" toggle (checkmark menu item, persisted to UserDefaults "autoPasteEnabled", default true), separator, "Quit Speak2"
-  - [ ] 2.3 Write `AppState.swift`: `@Observable @MainActor` class with `recordingState` (.idle), `audioLevel` (0.0), `selectedVersion` (.v2), `engineLoadingState` (.notDownloaded)
-  - [ ] 2.4 Verify no dock icon appears, menu bar icon shows, menu opens
+- [x] 2. App bootstrap + menu bar
+  - [x] 2.1 Write `main.swift`: `NSApplication.shared`, create AppDelegate, `setActivationPolicy(.accessory)`, `app.run()`
+  - [x] 2.2 Write `AppDelegate.swift`: `NSStatusItem` with waveform icon, menu with "Settings...", "View History...", separator, "Auto-Paste" toggle (checkmark menu item, persisted to UserDefaults "autoPasteEnabled", default true), separator, "Quit Speak2"
+  - [x] 2.3 Write `AppState.swift`: `@Observable @MainActor` class with `recordingState` (.idle), `audioLevel` (0.0), `selectedVersion` (.v2), `engineLoadingState` (.notDownloaded)
+  - [x] 2.4 Verify no dock icon appears, menu bar icon shows, menu opens
     - _Acceptance: app launches as menu-bar-only with waveform icon, quit works_
 
-- [ ] 3. AudioRecorder actor
-  - [ ] 3.1 Write `AudioRecorder.swift` as Swift `actor`
-  - [ ] 3.2 Implement `startRecording(onLevelUpdate: @Sendable (Float) -> Void)`: create fresh AVAudioEngine, install 1024-sample tap, resample to 16kHz via stride if needed, calculate RMS dB, normalize to 0–1 range `max(0, min(1, (db + 55) / 35))`, call onLevelUpdate
-  - [ ] 3.3 Implement `stopRecording() -> [Float]?`: set isRecording=false first, removeTap THEN stop engine (order matters — late callbacks fire otherwise), validate duration >= 0.3s, validate RMS >= -55dB, pad with 1s zeros if duration < 1.5s, return buffer or nil
-  - [ ] 3.4 Implement `cancelRecording()`: stop engine, remove tap, clear buffer
-  - [ ] 3.5 Implement 5-minute auto-stop: check `audioBuffer.count > 4_800_000` in tap callback, fire stop if exceeded
+- [x] 3. AudioRecorder actor
+  - [x] 3.1 Write `AudioRecorder.swift` as Swift `actor`
+  - [x] 3.2 Implement `startRecording(onLevelUpdate: @Sendable (Float) -> Void)`: create fresh AVAudioEngine, install 1024-sample tap, resample to 16kHz via stride if needed, calculate RMS dB, normalize to 0–1 range `max(0, min(1, (db + 55) / 35))`, call onLevelUpdate
+  - [x] 3.3 Implement `stopRecording() -> [Float]?`: set isRecording=false first, removeTap THEN stop engine (order matters — late callbacks fire otherwise), validate duration >= 0.3s, validate RMS >= -55dB, pad with 1s zeros if duration < 1.5s, return buffer or nil
+  - [x] 3.4 Implement `cancelRecording()`: stop engine, remove tap, clear buffer
+  - [x] 3.5 Implement 5-minute auto-stop: check `audioBuffer.count > 4_800_000` in tap callback, fire stop if exceeded
     - _Acceptance: can record audio, get level updates, stop returns valid 16kHz buffer, cancel clears state_
 
-- [ ] 4. HotkeyManager
-  - [ ] 4.1 Write `HotkeyManager.swift` with KeyboardShortcuts.Name extensions: `.toggleRecording` (Cmd+Opt+Z), `.toggleRecordingAlt` (Cmd+Opt+.), `.showHistory` (Cmd+Opt+A), `.pasteLastTranscription` (Cmd+Opt+V)
-  - [ ] 4.2 Register default shortcuts via `KeyboardShortcuts.setShortcut()`
-  - [ ] 4.3 Wire `onKeyUp` handlers to AppDelegate callbacks
-  - [ ] 4.4 Implement Escape key monitor: `NSEvent.addGlobalMonitorForEvents(matching: .keyDown)` for keyCode 53, install only during recording, remove on stop/cancel
+- [x] 4. HotkeyManager
+  - [x] 4.1 Write `HotkeyManager.swift` with KeyboardShortcuts.Name extensions: `.toggleRecording` (Cmd+Opt+Z), `.toggleRecordingAlt` (Cmd+Opt+.), `.showHistory` (Cmd+Opt+A), `.pasteLastTranscription` (Cmd+Opt+V)
+  - [x] 4.2 Register default shortcuts via `KeyboardShortcuts.setShortcut()`
+  - [x] 4.3 Wire `onKeyUp` handlers to AppDelegate callbacks
+  - [x] 4.4 Implement Escape key monitor: `NSEvent.addGlobalMonitorForEvents(matching: .keyDown)` for keyCode 53, install only during recording, remove on stop/cancel
     - _Acceptance: hotkeys trigger recording toggle, escape cancels, all 4 shortcuts work_
 
-- [ ] 5. GlowOverlay
-  - [ ] 5.1 Write `GlowOverlay.swift`: borderless NSWindow, 6pt tall, full screen width, bottom edge, click-through, always on top, joins all spaces
-  - [ ] 5.2 Create `CAGradientLayer` as contentView backing: axial horizontal, center-bright with transparent edges at locations [0.0, 0.3, 0.7, 1.0]
-  - [ ] 5.3 Implement `show(state:)` with color mapping: recording=#00BFFF, processing=#FFB020, done=#30D158, error=#FF453A
-  - [ ] 5.4 Recording state: opacity = `0.3 + 0.7 * audioLevel`, updated via `updateLevel(_ level: Float)`
-  - [ ] 5.5 Processing state: `CABasicAnimation` pulse opacity 0.4↔0.9, duration 0.8s, autoreverses, repeats infinite
-  - [ ] 5.6 Done/error state: `CAKeyframeAnimation` opacity [1.0, 1.0, 0.0] at keyTimes [0, 0.5, 1.0], duration 0.6s, then hide
-  - [ ] 5.7 Cancelled state: fade out opacity to 0.0 over 0.2s, then hide
-  - [ ] 5.8 Multi-monitor: reposition to `NSScreen.main` on each state transition
-  - [ ] 5.9 `hide()`: remove all animations, `orderOut`
+- [x] 5. GlowOverlay
+  - [x] 5.1 Write `GlowOverlay.swift`: borderless NSWindow, 6pt tall, full screen width, bottom edge, click-through, always on top, joins all spaces
+  - [x] 5.2 Create `CAGradientLayer` as contentView backing: axial horizontal, center-bright with transparent edges at locations [0.0, 0.3, 0.7, 1.0]
+  - [x] 5.3 Implement `show(state:)` with color mapping: recording=#00BFFF, processing=#FFB020, done=#30D158, error=#FF453A
+  - [x] 5.4 Recording state: opacity = `0.3 + 0.7 * audioLevel`, updated via `updateLevel(_ level: Float)`
+  - [x] 5.5 Processing state: `CABasicAnimation` pulse opacity 0.4↔0.9, duration 0.8s, autoreverses, repeats infinite
+  - [x] 5.6 Done/error state: `CAKeyframeAnimation` opacity [1.0, 1.0, 0.0] at keyTimes [0, 0.5, 1.0], duration 0.6s, then hide
+  - [x] 5.7 Cancelled state: fade out opacity to 0.0 over 0.2s, then hide
+  - [x] 5.8 Multi-monitor: reposition to `NSScreen.main` on each state transition
+  - [x] 5.9 `hide()`: remove all animations, `orderOut`
     - _Acceptance: glow bar visible at bottom edge, reacts to audio level, transitions through all states with correct colors and animations_
 
 ## Phase 2: Transcription
 
-- [ ] 6. TranscriptionEngine protocol + ParakeetVersion
-  - [ ] 6.1 Write `TranscriptionEngine.swift` protocol: `isReady: Bool`, `loadModel() async throws`, `unloadModel()`, `transcribe(audioSamples: [Float]) async throws -> String`
-  - [ ] 6.2 Write `Speak2Kit/Models/ParakeetVersion.swift` enum with v2/v3 cases, computed properties: displayName, description, size, speed, wer, accuracy, languages
+- [x] 6. TranscriptionEngine protocol + ParakeetVersion
+  - [x] 6.1 Write `TranscriptionEngine.swift` protocol: `isReady: Bool`, `loadModel() async throws`, `unloadModel()`, `transcribe(audioSamples: [Float]) async throws -> String`
+  - [x] 6.2 Write `Speak2Kit/Models/ParakeetVersion.swift` enum with v2/v3 cases, computed properties: displayName, description, size, speed, wer, accuracy, languages
     - _Acceptance: protocol compiles, ParakeetVersion has all metadata_
 
-- [ ] 7. ParakeetEngine
-  - [ ] 7.1 Write `ParakeetEngine.swift` conforming to `TranscriptionEngine`
-  - [ ] 7.2 `loadModel(version:)`: create `AsrManager()`, create `~/Documents/Speak2/models/` if needed, `AsrModels.load(from:version:)`, `manager.initialize(models:)`
-  - [ ] 7.3 `transcribe(audioSamples:)`: call `manager.transcribe()`, return `.text`
-  - [ ] 7.4 `unloadModel()`: set asrManager to nil
-  - [ ] 7.5 `isReady`: check asrManager != nil
+- [x] 7. ParakeetEngine
+  - [x] 7.1 Write `ParakeetEngine.swift` conforming to `TranscriptionEngine`
+  - [x] 7.2 `loadModel(version:)`: create `AsrManager()`, create `~/Documents/Speak2/models/` if needed, `AsrModels.load(from:version:)`, `manager.initialize(models:)`
+  - [x] 7.3 `transcribe(audioSamples:)`: call `manager.transcribe()`, return `.text`
+  - [x] 7.4 `unloadModel()`: set asrManager to nil
+  - [x] 7.5 `isReady`: check asrManager != nil
     - _Acceptance: can download Parakeet v2, load it, transcribe a test buffer, unload it_
 
-- [ ] 8. EngineManager
-  - [ ] 8.1 Write `EngineManager.swift` as `@MainActor` class
-  - [ ] 8.2 `loadModel(version:)`: cancel existing loadTask, unload current, create new ParakeetEngine, load it, update AppState.engineLoadingState through states (.downloading → .loading → .loaded)
-  - [ ] 8.3 `unloadModel()`: call engine.unloadModel(), set engine = nil, set state to .downloaded or .notDownloaded based on files on disk
-  - [ ] 8.4 `transcribe(audioSamples:)`: guard engine.isReady, delegate to engine
-  - [ ] 8.5 `isModelDownloaded(version:)`: check model files exist at ~/Documents/Speak2/models/
-  - [ ] 8.6 On startup: load previously selected version from UserDefaults
+- [x] 8. EngineManager
+  - [x] 8.1 Write `EngineManager.swift` as `@MainActor` class
+  - [x] 8.2 `loadModel(version:)`: cancel existing loadTask, unload current, create new ParakeetEngine, load it, update AppState.engineLoadingState through states (.downloading → .loading → .loaded)
+  - [x] 8.3 `unloadModel()`: call engine.unloadModel(), set engine = nil, set state to .downloaded or .notDownloaded based on files on disk
+  - [x] 8.4 `transcribe(audioSamples:)`: guard engine.isReady, delegate to engine
+  - [x] 8.5 `isModelDownloaded(version:)`: check model files exist at ~/Documents/Speak2/models/
+  - [x] 8.6 On startup: load previously selected version from UserDefaults
     - _Acceptance: version switching works, state updates correctly, memory freed on unload_
 
 - [ ] 9. Wire recording → transcription flow
@@ -80,25 +80,25 @@
 
 ## Phase 3: Integration
 
-- [ ] 10. PasteService
-  - [ ] 10.1 Write `PasteService.swift`
-  - [ ] 10.2 `pasteAtCursor(_ text:)`: check `AppState.autoPasteEnabled` — if true: save all pasteboard types, set text, simulate Cmd+V via CGEvent (keyDown virtualKey 0x09 with .maskCommand, then keyUp); if false: just set text on clipboard, show "Copied to clipboard" notification, skip Cmd+V and clipboard restore
-  - [ ] 10.3 After 0.2s delay: check frontmost app bundleIdentifier against problematic list (com.apple.finder, com.apple.dock, com.apple.systempreferences), if match → trigger show history hotkey
-  - [ ] 10.4 Restore original clipboard contents after the 0.2s delay
+- [x] 10. PasteService
+  - [x] 10.1 Write `PasteService.swift`
+  - [x] 10.2 `pasteAtCursor(_ text:)`: check `AppState.autoPasteEnabled` — if true: save all pasteboard types, set text, simulate Cmd+V via CGEvent (keyDown virtualKey 0x09 with .maskCommand, then keyUp); if false: just set text on clipboard, show "Copied to clipboard" notification, skip Cmd+V and clipboard restore
+  - [x] 10.3 After 0.2s delay: check frontmost app bundleIdentifier against problematic list (com.apple.finder, com.apple.dock, com.apple.systempreferences), if match → trigger show history hotkey
+  - [x] 10.4 Restore original clipboard contents after the 0.2s delay
     - _Acceptance: transcription pastes at cursor in text editors, clipboard restored, problematic apps trigger history fallback_
 
-- [ ] 11. NotificationService
-  - [ ] 11.1 Write `NotificationService.swift` wrapping `UNUserNotificationCenter`
-  - [ ] 11.2 Request authorization on first use (`.alert`, `.sound`)
-  - [ ] 11.3 Implement notification methods: `showTranscriptionComplete(text:)`, `showError(message:)`, `showCancelled()`, `showSkipped()`
-  - [ ] 11.4 Each notification: create `UNMutableNotificationContent`, add to center with `UNNotificationRequest`
+- [x] 11. NotificationService
+  - [x] 11.1 Write `NotificationService.swift` wrapping `UNUserNotificationCenter`
+  - [x] 11.2 Request authorization on first use (`.alert`, `.sound`)
+  - [x] 11.3 Implement notification methods: `showTranscriptionComplete(text:)`, `showError(message:)`, `showCancelled()`, `showSkipped()`
+  - [x] 11.4 Each notification: create `UNMutableNotificationContent`, add to center with `UNNotificationRequest`
     - _Acceptance: notifications appear for all recording states, sound plays on completion_
 
-- [ ] 12. TextReplacements
-  - [ ] 12.1 Write `Speak2Kit/TextProcessing/TextReplacementEngine.swift`: pure logic, no file I/O — `func process(_ text: String, replacements: [String: String]) -> String`
-  - [ ] 12.2 Implement: apply all find→replace, strip enclosing quotes (4 types: "", '', \u201c\u201d, \u2018\u2019), clean bullet formatting (remove "- " prefix, remove single leading space, preserve double+ spaces)
-  - [ ] 12.3 Write `Services/TextReplacements.swift`: singleton that loads `config.json` from working directory, delegates to TextReplacementEngine
-  - [ ] 12.4 `reloadConfig()` method to hot-reload from disk
+- [x] 12. TextReplacements
+  - [x] 12.1 Write `Speak2Kit/TextProcessing/TextReplacementEngine.swift`: pure logic, no file I/O — `func process(_ text: String, replacements: [String: String]) -> String`
+  - [x] 12.2 Implement: apply all find→replace, strip enclosing quotes (4 types: "", '', \u201c\u201d, \u2018\u2019), clean bullet formatting (remove "- " prefix, remove single leading space, preserve double+ spaces)
+  - [x] 12.3 Write `Services/TextReplacements.swift`: singleton that loads `config.json` from working directory, delegates to TextReplacementEngine
+  - [x] 12.4 `reloadConfig()` method to hot-reload from disk
     - _Acceptance: text replacements applied correctly, quote stripping works for all 4 types, bullet cleanup preserves indentation_
 
 - [ ] 13. End-to-end integration
@@ -111,11 +111,11 @@
 
 ## Phase 4: UI
 
-- [ ] 14. Settings window shell
-  - [ ] 14.1 Write `SettingsWindow.swift`: NSWindow (850x600, min 600x400) hosting SwiftUI tabbed view, `isReleasedWhenClosed = false`
-  - [ ] 14.2 Implement 4 tabs with toolbar-style icons: Settings (gear), History (clock), Statistics (chart.bar), Audio Devices (speaker.wave.2)
-  - [ ] 14.3 Wire "Settings..." menu item to show window
-  - [ ] 14.4 Wire "View History..." menu item to show window on history tab
+- [x] 14. Settings window shell
+  - [x] 14.1 Write `SettingsWindow.swift`: NSWindow (850x600, min 600x400) hosting SwiftUI tabbed view, `isReleasedWhenClosed = false`
+  - [x] 14.2 Implement 4 tabs with toolbar-style icons: Settings (gear), History (clock), Statistics (chart.bar), Audio Devices (speaker.wave.2)
+  - [x] 14.3 Wire "Settings..." menu item to show window
+  - [x] 14.4 Wire "View History..." menu item to show window on history tab
     - _Acceptance: window opens from menu bar, tabs switch, window persists in memory_
 
 - [ ] 15. SettingsView (model selection)
