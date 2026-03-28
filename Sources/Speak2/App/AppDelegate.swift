@@ -7,13 +7,138 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let appState = AppState()
     private lazy var settingsWindow = SettingsWindow()
 
+    private let audioRecorder = AudioRecorder()
+    private lazy var engineManager = EngineManager(appState: appState)
+    private let glowOverlay = GlowOverlay()
+    private let hotkeyManager = HotkeyManager()
+    private var transientTimer: Timer?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Speak2")
         }
         statusItem.menu = buildMenu()
+
+        hotkeyManager.onToggleRecording = { [weak self] in self?.handleToggleHotkey() }
+        hotkeyManager.onEscapePressed = { [weak self] in self?.handleEscape() }
+        hotkeyManager.onShowHistory = { [weak self] in self?.openHistory() }
+        hotkeyManager.onPasteLastTranscription = { [weak self] in
+            guard let self, let text = self.appState.recentTranscription else { return }
+            PasteService.pasteAtCursor(text, autoPasteEnabled: true)
+        }
+
+        engineManager.loadModel(version: appState.selectedVersion)
     }
+
+    // MARK: - State Machine
+
+    private func handleToggleHotkey() {
+        switch appState.recordingState {
+        case .idle:
+            startRecording()
+        case .recording:
+            stopAndTranscribe()
+        case .processing:
+            return
+        case .done, .error, .cancelled:
+            cancelTransientTimer()
+            startRecording()
+        }
+    }
+
+    private func handleEscape() {
+        guard appState.recordingState == .recording else { return }
+        hotkeyManager.removeEscapeMonitor()
+
+        Task {
+            await audioRecorder.cancelRecording()
+            appState.recordingState = .cancelled
+            glowOverlay.show(state: .cancelled)
+            NotificationService.shared.showCancelled()
+            scheduleTransientTimer(duration: 0.3)
+        }
+    }
+
+    // MARK: - Recording Flow
+
+    private func startRecording() {
+        appState.recordingState = .recording
+        glowOverlay.show(state: .recording)
+        hotkeyManager.installEscapeMonitor()
+
+        Task {
+            do {
+                try await audioRecorder.startRecording { [weak self] level in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        self.appState.audioLevel = Double(level)
+                        self.glowOverlay.show(state: .recording, audioLevel: CGFloat(level))
+                    }
+                }
+            } catch {
+                appState.recordingState = .error
+                glowOverlay.show(state: .error)
+                NotificationService.shared.showError(message: error.localizedDescription)
+                hotkeyManager.removeEscapeMonitor()
+                scheduleTransientTimer(duration: 0.6)
+            }
+        }
+    }
+
+    private func stopAndTranscribe() {
+        hotkeyManager.removeEscapeMonitor()
+
+        Task {
+            let samples = await audioRecorder.stopRecording()
+
+            guard let samples else {
+                appState.recordingState = .cancelled
+                glowOverlay.show(state: .cancelled)
+                NotificationService.shared.showSkipped()
+                scheduleTransientTimer(duration: 0.3)
+                return
+            }
+
+            appState.recordingState = .processing
+            glowOverlay.show(state: .processing)
+
+            do {
+                let text = try await engineManager.transcribe(audioSamples: samples)
+                appState.recordingState = .done
+                appState.recentTranscription = text
+                glowOverlay.show(state: .done)
+                NotificationService.shared.showTranscriptionComplete(text: text)
+                PasteService.pasteAtCursor(text, autoPasteEnabled: appState.autoPasteEnabled)
+                scheduleTransientTimer(duration: 0.6)
+            } catch {
+                appState.recordingState = .error
+                glowOverlay.show(state: .error)
+                NotificationService.shared.showError(message: error.localizedDescription)
+                scheduleTransientTimer(duration: 0.6)
+            }
+        }
+    }
+
+    // MARK: - Transient Timer
+
+    private func scheduleTransientTimer(duration: TimeInterval) {
+        transientTimer?.invalidate()
+        transientTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.appState.recordingState = .idle
+                self?.appState.audioLevel = 0.0
+                self?.glowOverlay.hide()
+            }
+        }
+    }
+
+    private func cancelTransientTimer() {
+        transientTimer?.invalidate()
+        transientTimer = nil
+    }
+
+    // MARK: - Menu
 
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
