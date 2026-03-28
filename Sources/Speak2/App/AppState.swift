@@ -24,7 +24,9 @@ enum EngineLoadingState: Equatable {
 final class AppState {
     var recordingState: RecordingState = .idle
     var audioLevel: Double = 0.0
-    var selectedVersion: ParakeetVersion = .v2
+    var selectedVersion: ParakeetVersion = .v2 {
+        didSet { UserDefaults.standard.set(selectedVersion.rawValue, forKey: "selectedParakeetVersion") }
+    }
     var engineLoadingState: EngineLoadingState = .notDownloaded
     var autoPasteEnabled: Bool {
         didSet { UserDefaults.standard.set(autoPasteEnabled, forKey: "autoPasteEnabled") }
@@ -38,5 +40,10 @@ final class AppState {
             defaults.set(true, forKey: "autoPasteEnabled")
         }
         self.autoPasteEnabled = defaults.bool(forKey: "autoPasteEnabled")
+
+        if let raw = defaults.string(forKey: "selectedParakeetVersion"),
+           let version = ParakeetVersion(rawValue: raw) {
+            self.selectedVersion = version
+        }
     }
 }

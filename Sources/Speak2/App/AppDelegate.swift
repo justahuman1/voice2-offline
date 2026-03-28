@@ -30,6 +30,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         PasteService.onProblematicApp = { [weak self] in self?.openHistory() }
         TranscriptionHistory.shared.load()
+
+        if engineManager.isModelDownloaded(version: appState.selectedVersion) {
+            appState.engineLoadingState = .downloaded
+        }
         engineManager.loadModel(version: appState.selectedVersion)
     }
 
