@@ -13,17 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hotkeyManager = HotkeyManager()
     private var transientTimer: Timer?
 
-    private var didSetup = false
-
     func applicationDidFinishLaunching(_ notification: Notification) {
-        setup()
-    }
-
-    func setup() {
-        guard !didSetup else { return }
-        didSetup = true
-
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
             if let image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Speak2") {
                 button.image = image
@@ -48,6 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.engineLoadingState = .downloaded
         }
         engineManager.loadModel(version: appState.selectedVersion)
+
+        // Hide from dock now that status item is set up
+        NSApp.setActivationPolicy(.accessory)
     }
 
     // MARK: - State Machine
