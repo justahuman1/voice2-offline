@@ -55,7 +55,7 @@ All shortcuts are customizable in Settings.
 
 ## Configuration
 
-Text replacements are loaded from `~/Documents/Speak2/config.json`, falling back to `./config.json` in the working directory:
+Text replacements are loaded from `~/Library/Application Support/Speak2/config.json`, falling back to `./config.json` in the working directory:
 
 ```json
 {

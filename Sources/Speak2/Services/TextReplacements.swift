@@ -13,7 +13,8 @@ final class TextReplacements {
     func reloadConfig() {
         replacements = [:]
 
-        let primaryPath = NSString("~/Documents/Speak2/config.json").expandingTildeInPath
+        let primaryPath = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("Speak2/config.json").path
         let fallbackPath = "./config.json"
 
         let path: String

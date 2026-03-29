@@ -10,8 +10,8 @@ final class TranscriptionHistory {
     private static let maxEntries = 100
 
     private var fileURL: URL {
-        let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Documents/Speak2", isDirectory: true)
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("Speak2", isDirectory: true)
         return dir.appendingPathComponent("transcription_history.json")
     }
 
