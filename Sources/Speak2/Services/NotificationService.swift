@@ -8,6 +8,10 @@ final class NotificationService {
     private init() {}
 
     private func ensureAuthorized(completion: @escaping (Bool) -> Void) {
+        guard Bundle.main.bundleIdentifier != nil else {
+            completion(false)
+            return
+        }
         if authorized {
             completion(true)
             return
