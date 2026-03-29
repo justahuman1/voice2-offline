@@ -16,7 +16,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Speak2")
+            if let image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Speak2") {
+                button.image = image
+            } else {
+                button.title = "S2"
+            }
         }
         statusItem.menu = buildMenu()
 
