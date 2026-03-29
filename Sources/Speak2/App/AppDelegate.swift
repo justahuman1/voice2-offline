@@ -40,9 +40,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         engineManager.loadModel(version: appState.selectedVersion)
 
-        // Hide from dock — LSUIElement in the .app bundle's Info.plist handles this
-        // when launched via run.sh. For bare executable runs, switch policy manually.
-        NSApp.setActivationPolicy(.accessory)
+        // Hide from dock after a brief delay — switching immediately can
+        // prevent the status item from rendering.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 
     // MARK: - State Machine
