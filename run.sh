@@ -1,7 +1,6 @@
 #!/bin/bash
 # Build and run Speak2 as a proper .app bundle so macOS shows the menu bar icon.
-# A bare executable from `swift build` doesn't register with the window server
-# properly — wrapping it in a minimal .app bundle fixes this.
+# The .app bundle is created once and reused so macOS permission grants persist.
 
 set -euo pipefail
 
@@ -14,15 +13,12 @@ MACOS="${CONTENTS}/MacOS"
 echo "Building ${APP_NAME}..."
 swift build
 
-# Create minimal .app bundle
-rm -rf "${APP_DIR}"
-mkdir -p "${MACOS}"
+# Create .app bundle only if it doesn't exist
+if [ ! -f "${CONTENTS}/Info.plist" ]; then
+    echo "Creating ${APP_NAME}.app bundle..."
+    mkdir -p "${MACOS}"
 
-# Copy binary
-cp ".build/debug/${APP_NAME}" "${MACOS}/${APP_NAME}"
-
-# Write minimal Info.plist
-cat > "${CONTENTS}/Info.plist" << 'PLIST'
+    cat > "${CONTENTS}/Info.plist" << 'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -41,9 +37,15 @@ cat > "${CONTENTS}/Info.plist" << 'PLIST'
     <string>1.0</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Speak2 needs microphone access to record speech for transcription.</string>
 </dict>
 </plist>
 PLIST
+fi
+
+# Always update the binary
+cp ".build/debug/${APP_NAME}" "${MACOS}/${APP_NAME}"
 
 echo "Running ${APP_NAME}.app..."
 open "${APP_DIR}"
