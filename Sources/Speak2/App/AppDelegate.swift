@@ -40,7 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         engineManager.loadModel(version: appState.selectedVersion)
 
-        // Hide from dock now that status item is set up
+        // Hide from dock — LSUIElement in the .app bundle's Info.plist handles this
+        // when launched via run.sh. For bare executable runs, switch policy manually.
         NSApp.setActivationPolicy(.accessory)
     }
 
