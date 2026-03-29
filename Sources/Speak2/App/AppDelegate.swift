@@ -13,7 +13,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let hotkeyManager = HotkeyManager()
     private var transientTimer: Timer?
 
+    private var didSetup = false
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        setup()
+    }
+
+    func setup() {
+        guard !didSetup else { return }
+        didSetup = true
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             if let image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Speak2") {

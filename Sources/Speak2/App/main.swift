@@ -9,6 +9,7 @@ func bootstrap() {
     appDelegate = delegate
     app.delegate = delegate
     app.setActivationPolicy(.accessory)
+    delegate.setup()
     app.run()
 }
 
