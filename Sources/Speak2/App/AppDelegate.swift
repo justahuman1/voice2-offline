@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -34,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         PasteService.onProblematicApp = { [weak self] in self?.openHistory() }
         TranscriptionHistory.shared.load()
+        checkAccessibilityPermission()
 
         if engineManager.isModelDownloaded(version: appState.selectedVersion) {
             appState.engineLoadingState = .downloaded
@@ -199,5 +201,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleAutoPaste() {
         appState.autoPasteEnabled.toggle()
         autoPasteMenuItem.state = appState.autoPasteEnabled ? .on : .off
+    }
+
+    // MARK: - Permissions
+
+    private func checkAccessibilityPermission() {
+        let trusted = AXIsProcessTrustedWithOptions(
+            [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+        )
+        if !trusted {
+            print("Speak2: Accessibility permission required for global hotkeys and paste.")
+        }
     }
 }
