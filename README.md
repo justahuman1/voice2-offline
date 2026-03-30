@@ -4,6 +4,12 @@ Offline speech-to-text for macOS. Press a hotkey, talk, release — transcribed 
 
 Everything runs locally on your Mac. No accounts, no API keys, no network requests.
 
+
+https://github.com/user-attachments/assets/3bbdbff9-a87c-42c9-9029-6540bf22ec9d
+
+
+
+
 ## How it works
 
 1. Global hotkey starts recording
