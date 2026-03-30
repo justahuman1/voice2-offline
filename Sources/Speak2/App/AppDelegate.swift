@@ -33,7 +33,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             PasteService.pasteAtCursor(text, autoPasteEnabled: true)
         }
 
-        PasteService.onProblematicApp = { [weak self] in self?.openHistory() }
         TranscriptionHistory.shared.load()
         checkAccessibilityPermission()
 
