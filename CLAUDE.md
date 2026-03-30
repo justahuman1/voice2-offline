@@ -6,8 +6,10 @@ macOS menu-bar speech-to-text app. Record via global hotkey, transcribe on-devic
 
 ```bash
 swift build
-swift run Speak2        # or: .build/debug/Speak2
+.build/debug/Speak2     # must run the binary directly, NOT swift run
 ```
+
+**Do not use `swift run`** — it runs the binary as a child process, which prevents `NSStatusItem` from rendering in the menu bar. Always run the binary directly.
 
 Requires Terminal to have Accessibility permission (System Settings > Privacy > Accessibility) for global hotkeys and paste simulation.
 
