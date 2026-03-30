@@ -17,7 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
-            if let image = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Speak2") {
+            if let image = NSImage(systemSymbolName: "ear", accessibilityDescription: "Speak2") {
                 button.image = image
             } else {
                 button.title = "S2"

@@ -18,7 +18,7 @@ final class HotkeyManager {
     private var escapeMonitor: Any?
 
     init() {
-        KeyboardShortcuts.setShortcut(.init(.z, modifiers: [.command, .option]), for: .toggleRecording)
+        KeyboardShortcuts.setShortcut(.init(.x, modifiers: [.command, .option]), for: .toggleRecording)
         KeyboardShortcuts.setShortcut(.init(.period, modifiers: [.command, .option]), for: .toggleRecordingAlt)
         KeyboardShortcuts.setShortcut(.init(.a, modifiers: [.command, .option]), for: .showHistory)
         KeyboardShortcuts.setShortcut(.init(.v, modifiers: [.command, .option]), for: .pasteLastTranscription)
