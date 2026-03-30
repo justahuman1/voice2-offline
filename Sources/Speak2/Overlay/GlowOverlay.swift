@@ -25,16 +25,20 @@ extension GlowColor {
 
 final class GlowOverlay {
 
-    private static let windowHeight: CGFloat = 14
+    private static let windowHeight: CGFloat = 50
 
     private var window: NSWindow?
-    private var gradientLayer: CAGradientLayer?
+    private var bloomLayer: CAGradientLayer?
+    private var coreLayer: CAGradientLayer?
+    private var smoothedLevel: CGFloat = 0.0
 
     func show(state: OverlayState, glowColor: GlowColor = .cyan, audioLevel: CGFloat = 0.0) {
         setupWindowIfNeeded()
         repositionToMainScreen()
 
-        guard let window = window, let layer = gradientLayer else { return }
+        guard let window = window,
+              let bloom = bloomLayer,
+              let core = coreLayer else { return }
 
         let color: NSColor
         switch state {
@@ -47,50 +51,88 @@ final class GlowOverlay {
         case .error:
             color = NSColor(red: 1.0, green: 0.271, blue: 0.227, alpha: 1.0)
         case .cancelled:
+            smoothedLevel = 0.0
             fadeOut()
             return
         }
 
         let cgColor = color.cgColor
-        layer.removeAllAnimations()
+        bloom.removeAllAnimations()
+        core.removeAllAnimations()
 
         switch state {
         case .recording:
             let level = min(max(audioLevel, 0.0), 1.0)
-            let opacity = Float(0.3 + 0.7 * level)
-            layer.opacity = opacity
+            // Smooth the level for the bloom layer (trailing glow)
+            smoothedLevel += (level - smoothedLevel) * 0.3
 
-            // Gradient spread responds to audio level:
-            // quiet = tight center glow, loud = spread across full width
-            let spread = 0.15 + 0.35 * Double(level) // 0.15..0.50
-            let innerLeft = NSNumber(value: 0.5 - spread)
-            let innerRight = NSNumber(value: 0.5 + spread)
-            layer.locations = [0.0, innerLeft, innerRight, 1.0]
-            layer.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            // Core layer: sharp, bright, bottom 8px
+            let coreOpacity = Float(0.5 + 0.5 * level)
+            core.opacity = coreOpacity
+            let coreSpread = 0.15 + 0.35 * Double(level)
+            let coreLeft = NSNumber(value: 0.5 - coreSpread)
+            let coreRight = NSNumber(value: 0.5 + coreSpread)
+            core.locations = [0.0, coreLeft, coreRight, 1.0]
+            core.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+
+            // Bloom layer: wider, uses smoothed level for trailing glow
+            let bloomOpacity = Float(0.3 + 0.7 * smoothedLevel)
+            bloom.opacity = bloomOpacity
+            let bloomSpread = 0.10 + 0.40 * Double(smoothedLevel)
+            let bloomLeft = NSNumber(value: 0.5 - bloomSpread)
+            let bloomRight = NSNumber(value: 0.5 + bloomSpread)
+            bloom.locations = [0.0, bloomLeft, bloomRight, 1.0]
+            bloom.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
 
         case .processing:
-            layer.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
-            layer.locations = [0.0, 0.3, 0.7, 1.0]
-            layer.opacity = 1.0
+            smoothedLevel = 0.0
+            core.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            core.locations = [0.0, 0.3, 0.7, 1.0]
+            core.opacity = 1.0
+            bloom.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            bloom.locations = [0.0, 0.2, 0.8, 1.0]
+            bloom.opacity = 0.7
+
             let pulse = CABasicAnimation(keyPath: "opacity")
             pulse.fromValue = 0.4
             pulse.toValue = 0.9
             pulse.duration = 0.8
             pulse.autoreverses = true
             pulse.repeatCount = .infinity
-            layer.add(pulse, forKey: "pulse")
+            core.add(pulse, forKey: "pulse")
+
+            let bloomPulse = CABasicAnimation(keyPath: "opacity")
+            bloomPulse.fromValue = 0.3
+            bloomPulse.toValue = 0.7
+            bloomPulse.duration = 0.8
+            bloomPulse.autoreverses = true
+            bloomPulse.repeatCount = .infinity
+            bloom.add(bloomPulse, forKey: "pulse")
 
         case .done, .error:
-            layer.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
-            layer.locations = [0.0, 0.3, 0.7, 1.0]
-            layer.opacity = 1.0
+            smoothedLevel = 0.0
+            core.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            core.locations = [0.0, 0.3, 0.7, 1.0]
+            core.opacity = 1.0
+            bloom.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            bloom.locations = [0.0, 0.2, 0.8, 1.0]
+            bloom.opacity = 0.7
+
             let flash = CAKeyframeAnimation(keyPath: "opacity")
             flash.values = [1.0, 1.0, 0.0]
             flash.keyTimes = [0, 0.5, 1.0]
             flash.duration = 0.6
             flash.isRemovedOnCompletion = false
             flash.fillMode = .forwards
-            layer.add(flash, forKey: "flash")
+            core.add(flash, forKey: "flash")
+
+            let bloomFlash = CAKeyframeAnimation(keyPath: "opacity")
+            bloomFlash.values = [0.7, 0.7, 0.0]
+            bloomFlash.keyTimes = [0, 0.5, 1.0]
+            bloomFlash.duration = 0.6
+            bloomFlash.isRemovedOnCompletion = false
+            bloomFlash.fillMode = .forwards
+            bloom.add(bloomFlash, forKey: "flash")
 
         case .cancelled:
             break
@@ -100,22 +142,34 @@ final class GlowOverlay {
     }
 
     func hide() {
-        gradientLayer?.removeAllAnimations()
+        smoothedLevel = 0.0
+        bloomLayer?.removeAllAnimations()
+        coreLayer?.removeAllAnimations()
         window?.orderOut(nil)
     }
 
     private func fadeOut() {
-        guard let layer = gradientLayer else { return }
-        layer.removeAllAnimations()
-        let fade = CABasicAnimation(keyPath: "opacity")
-        fade.fromValue = layer.opacity
-        fade.toValue = 0.0
-        fade.duration = 0.2
-        fade.isRemovedOnCompletion = false
-        fade.fillMode = .forwards
-        layer.add(fade, forKey: "fadeOut")
+        guard let core = coreLayer, let bloom = bloomLayer else { return }
+        core.removeAllAnimations()
+        bloom.removeAllAnimations()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+        let coreFade = CABasicAnimation(keyPath: "opacity")
+        coreFade.fromValue = core.opacity
+        coreFade.toValue = 0.0
+        coreFade.duration = 0.2
+        coreFade.isRemovedOnCompletion = false
+        coreFade.fillMode = .forwards
+        core.add(coreFade, forKey: "fadeOut")
+
+        let bloomFade = CABasicAnimation(keyPath: "opacity")
+        bloomFade.fromValue = bloom.opacity
+        bloomFade.toValue = 0.0
+        bloomFade.duration = 0.3
+        bloomFade.isRemovedOnCompletion = false
+        bloomFade.fillMode = .forwards
+        bloom.add(bloomFade, forKey: "fadeOut")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.window?.orderOut(nil)
         }
     }
@@ -139,17 +193,46 @@ final class GlowOverlay {
         contentView.wantsLayer = true
         win.contentView = contentView
 
-        let layer = CAGradientLayer()
-        layer.frame = contentView.bounds
-        layer.type = .axial
-        layer.startPoint = CGPoint(x: 0, y: 0.5)
-        layer.endPoint = CGPoint(x: 1, y: 0.5)
-        layer.locations = [0.0, 0.3, 0.7, 1.0]
-        layer.colors = [NSColor.clear.cgColor, NSColor.clear.cgColor, NSColor.clear.cgColor, NSColor.clear.cgColor]
-        contentView.layer?.addSublayer(layer)
+        let clearColors = [NSColor.clear.cgColor, NSColor.clear.cgColor,
+                           NSColor.clear.cgColor, NSColor.clear.cgColor]
+
+        // Bloom layer: full window height, vertical fade from bottom
+        let bloom = CAGradientLayer()
+        bloom.frame = contentView.bounds
+        bloom.type = .axial
+        bloom.startPoint = CGPoint(x: 0, y: 0.5)
+        bloom.endPoint = CGPoint(x: 1, y: 0.5)
+        bloom.locations = [0.0, 0.3, 0.7, 1.0]
+        bloom.colors = clearColors
+        bloom.opacity = 0
+
+        // Vertical fade mask: opaque at bottom, transparent at top
+        let mask = CAGradientLayer()
+        mask.frame = bloom.bounds
+        mask.type = .axial
+        mask.startPoint = CGPoint(x: 0.5, y: 0)  // bottom
+        mask.endPoint = CGPoint(x: 0.5, y: 1)      // top
+        mask.colors = [NSColor.white.cgColor, NSColor.white.withAlphaComponent(0.0).cgColor]
+        mask.locations = [0.0, 1.0]
+        bloom.mask = mask
+
+        contentView.layer?.addSublayer(bloom)
+
+        // Core layer: bottom 8px, sharp bright glow
+        let coreHeight: CGFloat = 14
+        let core = CAGradientLayer()
+        core.frame = CGRect(x: 0, y: 0, width: contentView.bounds.width, height: coreHeight)
+        core.type = .axial
+        core.startPoint = CGPoint(x: 0, y: 0.5)
+        core.endPoint = CGPoint(x: 1, y: 0.5)
+        core.locations = [0.0, 0.3, 0.7, 1.0]
+        core.colors = clearColors
+        core.opacity = 0
+        contentView.layer?.addSublayer(core)
 
         self.window = win
-        self.gradientLayer = layer
+        self.bloomLayer = bloom
+        self.coreLayer = core
     }
 
     private func repositionToMainScreen() {
@@ -158,6 +241,12 @@ final class GlowOverlay {
         let frame = NSRect(x: screen.frame.origin.x, y: screen.frame.origin.y,
                            width: screen.frame.width, height: Self.windowHeight)
         window.setFrame(frame, display: true)
-        gradientLayer?.frame = window.contentView?.bounds ?? frame
+
+        let bounds = window.contentView?.bounds ?? frame
+        bloomLayer?.frame = bounds
+        (bloomLayer?.mask as? CALayer)?.frame = bounds
+
+        let coreHeight: CGFloat = 14
+        coreLayer?.frame = CGRect(x: 0, y: 0, width: bounds.width, height: coreHeight)
     }
 }
