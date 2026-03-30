@@ -42,8 +42,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         engineManager.loadModel(version: appState.selectedVersion)
 
-        // Using .regular activation policy so the menu bar icon renders
-        // when running via `swift run`. This means the app shows in the dock.
     }
 
     // MARK: - State Machine

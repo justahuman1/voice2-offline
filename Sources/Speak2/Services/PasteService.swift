@@ -1,47 +1,84 @@
 import AppKit
-import Carbon.HIToolbox
+import ApplicationServices
 
 enum PasteService {
     static var onProblematicApp: (() -> Void)?
 
-    private static let problematicBundleIDs: Set<String> = [
-        "com.apple.finder",
-        "com.apple.dock",
-        "com.apple.systempreferences",
-    ]
-
     static func pasteAtCursor(_ text: String, autoPasteEnabled: Bool) {
+        // Always put text on clipboard so user can manually paste
         let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
 
-        if autoPasteEnabled {
-            // 1. Save current pasteboard items
-            let savedItems = savePasteboardItems(pasteboard)
+        guard autoPasteEnabled else { return }
 
-            // 2. Set text on pasteboard
-            pasteboard.clearContents()
-            pasteboard.setString(text, forType: .string)
+        // Primary: insert directly via Accessibility API
+        if insertViaAccessibility(text) {
+            return
+        }
 
-            // 3. Simulate Cmd+V
-            simulatePaste()
+        // Fallback: synthetic Cmd+V (clipboard already set above)
+        pasteViaClipboard(text)
+    }
 
-            // 4. After delay, check for problematic apps and restore clipboard
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
-                   problematicBundleIDs.contains(bundleID) {
-                    onProblematicApp?()
-                }
+    // MARK: - Accessibility API insertion
 
-                // 5. Restore original clipboard
-                restorePasteboardItems(savedItems, to: pasteboard)
-            }
-        } else {
-            // Just set clipboard, no paste
-            pasteboard.clearContents()
-            pasteboard.setString(text, forType: .string)
+    private static func insertViaAccessibility(_ text: String) -> Bool {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedRef: AnyObject?
+        let focusResult = AXUIElementCopyAttributeValue(
+            systemWide, kAXFocusedUIElementAttribute as CFString, &focusedRef
+        )
+
+        guard focusResult == .success, let focused = focusedRef else {
+            return false
+        }
+
+        let element = focused as! AXUIElement
+
+        // Check if this element actually supports writable selected text
+        var settable: DarwinBoolean = false
+        let checkResult = AXUIElementIsAttributeSettable(
+            element, kAXSelectedTextAttribute as CFString, &settable
+        )
+        guard checkResult == .success, settable.boolValue else {
+            return false
+        }
+
+        let setResult = AXUIElementSetAttributeValue(
+            element, kAXSelectedTextAttribute as CFString, text as CFString
+        )
+
+        return setResult == .success
+    }
+
+    // MARK: - Clipboard + CGEvent fallback
+
+    private static func pasteViaClipboard(_ text: String) {
+        // Clipboard is already set by the caller — just simulate Cmd+V
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            self.simulatePaste()
         }
     }
 
-    // MARK: - Private
+    private static func simulatePaste() {
+        let source = CGEventSource(stateID: .hidSystemState)
+        let vKeyCode: CGKeyCode = 0x09
+
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: false) else {
+            return
+        }
+
+        keyDown.flags = .maskCommand
+        keyDown.post(tap: .cghidEventTap)
+
+        usleep(20_000)
+
+        keyUp.post(tap: .cghidEventTap)
+    }
+
+    // MARK: - Pasteboard save/restore
 
     private static func savePasteboardItems(_ pasteboard: NSPasteboard) -> [[(NSPasteboard.PasteboardType, Data)]] {
         guard let items = pasteboard.pasteboardItems else { return [] }
@@ -67,21 +104,6 @@ enum PasteService {
         }
         if !newItems.isEmpty {
             pasteboard.writeObjects(newItems)
-        }
-    }
-
-    private static func simulatePaste() {
-        let source = CGEventSource(stateID: .hidSystemState)
-        let vKeyCode: CGKeyCode = 0x09
-
-        if let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: true) {
-            keyDown.flags = .maskCommand
-            keyDown.post(tap: .cghidEventTap)
-        }
-
-        if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: false) {
-            keyUp.flags = .maskCommand
-            keyUp.post(tap: .cghidEventTap)
         }
     }
 }

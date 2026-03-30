@@ -5,6 +5,6 @@ let app = NSApplication.shared
 MainActor.assumeIsolated {
     let delegate = AppDelegate()
     app.delegate = delegate
-    app.setActivationPolicy(.regular)
+    app.setActivationPolicy(.accessory)
     app.run()
 }
