@@ -42,11 +42,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         engineManager.loadModel(version: appState.selectedVersion)
 
-        // Hide from dock after a brief delay — switching immediately can
-        // prevent the status item from rendering.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            NSApp.setActivationPolicy(.accessory)
-        }
+        // Using .regular activation policy so the menu bar icon renders
+        // when running via `swift run`. This means the app shows in the dock.
     }
 
     // MARK: - State Machine
