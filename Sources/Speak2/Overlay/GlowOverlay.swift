@@ -25,6 +25,8 @@ extension GlowColor {
 
 final class GlowOverlay {
 
+    private static let windowHeight: CGFloat = 14
+
     private var window: NSWindow?
     private var gradientLayer: CAGradientLayer?
 
@@ -39,26 +41,36 @@ final class GlowOverlay {
         case .recording:
             color = glowColor.nsColor
         case .processing:
-            color = NSColor(red: 1.0, green: 0.69, blue: 0.125, alpha: 1.0) // #FFB020
+            color = NSColor(red: 1.0, green: 0.69, blue: 0.125, alpha: 1.0)
         case .done:
-            color = NSColor(red: 0.188, green: 0.82, blue: 0.345, alpha: 1.0) // #30D158
+            color = NSColor(red: 0.188, green: 0.82, blue: 0.345, alpha: 1.0)
         case .error:
-            color = NSColor(red: 1.0, green: 0.271, blue: 0.227, alpha: 1.0) // #FF453A
+            color = NSColor(red: 1.0, green: 0.271, blue: 0.227, alpha: 1.0)
         case .cancelled:
             fadeOut()
             return
         }
 
         let cgColor = color.cgColor
-        layer.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
         layer.removeAllAnimations()
 
         switch state {
         case .recording:
-            let opacity = Float(0.3 + 0.7 * min(max(audioLevel, 0.0), 1.0))
+            let level = min(max(audioLevel, 0.0), 1.0)
+            let opacity = Float(0.3 + 0.7 * level)
             layer.opacity = opacity
 
+            // Gradient spread responds to audio level:
+            // quiet = tight center glow, loud = spread across full width
+            let spread = 0.15 + 0.35 * Double(level) // 0.15..0.50
+            let innerLeft = NSNumber(value: 0.5 - spread)
+            let innerRight = NSNumber(value: 0.5 + spread)
+            layer.locations = [0.0, innerLeft, innerRight, 1.0]
+            layer.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+
         case .processing:
+            layer.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            layer.locations = [0.0, 0.3, 0.7, 1.0]
             layer.opacity = 1.0
             let pulse = CABasicAnimation(keyPath: "opacity")
             pulse.fromValue = 0.4
@@ -69,6 +81,8 @@ final class GlowOverlay {
             layer.add(pulse, forKey: "pulse")
 
         case .done, .error:
+            layer.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            layer.locations = [0.0, 0.3, 0.7, 1.0]
             layer.opacity = 1.0
             let flash = CAKeyframeAnimation(keyPath: "opacity")
             flash.values = [1.0, 1.0, 0.0]
@@ -110,7 +124,8 @@ final class GlowOverlay {
         guard window == nil else { return }
 
         let screen = NSScreen.main ?? NSScreen.screens.first!
-        let frame = NSRect(x: screen.frame.origin.x, y: screen.frame.origin.y, width: screen.frame.width, height: 6)
+        let frame = NSRect(x: screen.frame.origin.x, y: screen.frame.origin.y,
+                           width: screen.frame.width, height: Self.windowHeight)
 
         let win = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         win.ignoresMouseEvents = true
@@ -140,7 +155,8 @@ final class GlowOverlay {
     private func repositionToMainScreen() {
         guard let window = window else { return }
         let screen = NSScreen.main ?? NSScreen.screens.first!
-        let frame = NSRect(x: screen.frame.origin.x, y: screen.frame.origin.y, width: screen.frame.width, height: 6)
+        let frame = NSRect(x: screen.frame.origin.x, y: screen.frame.origin.y,
+                           width: screen.frame.width, height: Self.windowHeight)
         window.setFrame(frame, display: true)
         gradientLayer?.frame = window.contentView?.bounds ?? frame
     }
