@@ -25,12 +25,20 @@ extension GlowColor {
 
 final class GlowOverlay {
 
-    private static let windowHeight: CGFloat = 50
+    private static let windowHeight: CGFloat = 38
+    private static let hueShift: CGFloat = 0.10
 
     private var window: NSWindow?
     private var bloomLayer: CAGradientLayer?
     private var coreLayer: CAGradientLayer?
     private var smoothedLevel: CGFloat = 0.0
+
+    private static func shiftedColor(_ color: NSColor) -> NSColor {
+        let c = color.usingColorSpace(.deviceRGB) ?? color
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        c.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        return NSColor(hue: fmod(h + hueShift, 1.0), saturation: s, brightness: b, alpha: a)
+    }
 
     func show(state: OverlayState, glowColor: GlowColor = .cyan, audioLevel: CGFloat = 0.0) {
         setupWindowIfNeeded()
@@ -75,23 +83,25 @@ final class GlowOverlay {
             core.locations = [0.0, coreLeft, coreRight, 1.0]
             core.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
 
-            // Bloom layer: wider, uses smoothed level for trailing glow
-            let bloomOpacity = Float(0.3 + 0.7 * smoothedLevel)
+            // Bloom layer: wider, hue-shifted, uses smoothed level for trailing glow
+            let bloomOpacity = Float(0.5 + 0.5 * smoothedLevel)
             bloom.opacity = bloomOpacity
             let bloomSpread = 0.10 + 0.40 * Double(smoothedLevel)
             let bloomLeft = NSNumber(value: 0.5 - bloomSpread)
             let bloomRight = NSNumber(value: 0.5 + bloomSpread)
             bloom.locations = [0.0, bloomLeft, bloomRight, 1.0]
-            bloom.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            let shifted = Self.shiftedColor(color).cgColor
+            bloom.colors = [NSColor.clear.cgColor, shifted, shifted, NSColor.clear.cgColor]
 
         case .processing:
             smoothedLevel = 0.0
+            let shifted = Self.shiftedColor(color).cgColor
             core.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
             core.locations = [0.0, 0.3, 0.7, 1.0]
             core.opacity = 1.0
-            bloom.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            bloom.colors = [NSColor.clear.cgColor, shifted, shifted, NSColor.clear.cgColor]
             bloom.locations = [0.0, 0.2, 0.8, 1.0]
-            bloom.opacity = 0.7
+            bloom.opacity = 0.5
 
             let pulse = CABasicAnimation(keyPath: "opacity")
             pulse.fromValue = 0.4
@@ -102,8 +112,8 @@ final class GlowOverlay {
             core.add(pulse, forKey: "pulse")
 
             let bloomPulse = CABasicAnimation(keyPath: "opacity")
-            bloomPulse.fromValue = 0.3
-            bloomPulse.toValue = 0.7
+            bloomPulse.fromValue = 0.2
+            bloomPulse.toValue = 0.5
             bloomPulse.duration = 0.8
             bloomPulse.autoreverses = true
             bloomPulse.repeatCount = .infinity
@@ -111,12 +121,13 @@ final class GlowOverlay {
 
         case .done, .error:
             smoothedLevel = 0.0
+            let shifted = Self.shiftedColor(color).cgColor
             core.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
             core.locations = [0.0, 0.3, 0.7, 1.0]
             core.opacity = 1.0
-            bloom.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            bloom.colors = [NSColor.clear.cgColor, shifted, shifted, NSColor.clear.cgColor]
             bloom.locations = [0.0, 0.2, 0.8, 1.0]
-            bloom.opacity = 0.7
+            bloom.opacity = 0.5
 
             let flash = CAKeyframeAnimation(keyPath: "opacity")
             flash.values = [1.0, 1.0, 0.0]
@@ -127,7 +138,7 @@ final class GlowOverlay {
             core.add(flash, forKey: "flash")
 
             let bloomFlash = CAKeyframeAnimation(keyPath: "opacity")
-            bloomFlash.values = [0.7, 0.7, 0.0]
+            bloomFlash.values = [0.5, 0.5, 0.0]
             bloomFlash.keyTimes = [0, 0.5, 1.0]
             bloomFlash.duration = 0.6
             bloomFlash.isRemovedOnCompletion = false
@@ -206,20 +217,24 @@ final class GlowOverlay {
         bloom.colors = clearColors
         bloom.opacity = 0
 
-        // Vertical fade mask: opaque at bottom, transparent at top
+        // Vertical fade mask: bright at bottom, rapid falloff upward
         let mask = CAGradientLayer()
         mask.frame = bloom.bounds
         mask.type = .axial
         mask.startPoint = CGPoint(x: 0.5, y: 0)  // bottom
         mask.endPoint = CGPoint(x: 0.5, y: 1)      // top
-        mask.colors = [NSColor.white.cgColor, NSColor.white.withAlphaComponent(0.0).cgColor]
-        mask.locations = [0.0, 1.0]
+        mask.colors = [
+            NSColor.white.cgColor,
+            NSColor.white.withAlphaComponent(0.4).cgColor,
+            NSColor.white.withAlphaComponent(0.0).cgColor,
+        ]
+        mask.locations = [0.0, 0.3, 0.75]
         bloom.mask = mask
 
         contentView.layer?.addSublayer(bloom)
 
         // Core layer: bottom 8px, sharp bright glow
-        let coreHeight: CGFloat = 14
+        let coreHeight: CGFloat = 10
         let core = CAGradientLayer()
         core.frame = CGRect(x: 0, y: 0, width: contentView.bounds.width, height: coreHeight)
         core.type = .axial
@@ -246,7 +261,7 @@ final class GlowOverlay {
         bloomLayer?.frame = bounds
         (bloomLayer?.mask as? CALayer)?.frame = bounds
 
-        let coreHeight: CGFloat = 14
+        let coreHeight: CGFloat = 10
         coreLayer?.frame = CGRect(x: 0, y: 0, width: bounds.width, height: coreHeight)
     }
 }
