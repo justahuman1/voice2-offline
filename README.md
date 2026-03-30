@@ -1,80 +1,38 @@
 # Speak2
 
-A menu-bar-only macOS app that records speech via global hotkeys, transcribes on-device using [Parakeet](https://github.com/huggingface/swift-transformers) (FluidAudio), and pastes the result at your cursor.
+Offline speech-to-text for macOS. Press a hotkey, talk, release — transcribed text is pasted at your cursor.
 
-## Features
+Everything runs locally on your Mac. No accounts, no API keys, no network requests.
 
-- **Menu-bar only** -- no Dock icon, lives entirely in the status bar
-- **On-device transcription** using Parakeet (FluidAudio) -- your audio never leaves your Mac
-  - **Parakeet v2** -- English only, fast and lightweight
-  - **Parakeet v3** -- 25 languages supported
-- **Global hotkey recording** -- start/stop recording from any app
-- **Bottom-edge glow bar** overlay showing recording state (customizable color)
-- **Auto-paste** transcribed text at cursor position, or copy to clipboard
-- **Text replacements** via `config.json` for common corrections
-- **Transcription history** -- stores up to 100 recent entries
-- **Customizable keyboard shortcuts** via Settings
-- **Audio device selection** -- choose input and output devices
+## How it works
 
-## Requirements
+1. Global hotkey starts recording
+2. Audio is transcribed on-device using [Parakeet](https://github.com/FluidInference/FluidAudio) (NVIDIA's speech recognition model)
+3. Result is pasted into whatever app has focus
 
-- macOS 14.0+
-- Swift 5.9+
-- Microphone permission
-- Accessibility permission (for simulated paste via `CGEvent`)
+## Install
 
-## Installation
+Requires macOS 14+ and Swift 5.9+.
 
 ```bash
-git clone <repo>
-cd speak2
 swift build
-swift run Speak2
+.build/debug/Speak2
 ```
 
-## Permissions Setup
+On first run, grant **Accessibility** and **Microphone** permission to Terminal (System Settings > Privacy & Security).
 
-Speak2 requires two system permissions:
+## Models
 
-1. **Microphone**: System Settings > Privacy & Security > Microphone > enable for Speak2 (or Terminal, if running from the command line)
-2. **Accessibility**: System Settings > Privacy & Security > Accessibility > add Speak2 (or Terminal)
+The first launch downloads the Parakeet model (~600 MB) from HuggingFace. After that, the app makes zero network requests — everything runs offline.
 
-The Accessibility permission is needed to simulate `Cmd+V` paste events via `CGEvent`.
+Models are cached in `~/Library/Application Support/FluidAudio/Models/`. For airgapped machines, copy this directory from a machine that has already downloaded the models.
 
-## Keyboard Shortcuts
+## Usage
 
-| Shortcut | Action |
-|---|---|
-| Cmd+Opt+Z | Toggle recording |
-| Cmd+Opt+. | Toggle recording (alternate) |
-| Cmd+Opt+A | Show history |
-| Cmd+Opt+V | Paste last transcription |
-| Escape | Cancel recording |
+Speak2 lives in the menu bar. Click the icon to configure your hotkey, pick an audio device, or browse transcription history.
 
-All shortcuts are customizable in Settings.
-
-## Configuration
-
-Text replacements are loaded from `~/Library/Application Support/Speak2/config.json`, falling back to `./config.json` in the working directory:
-
-```json
-{
-  "textReplacements": {
-    "gonna": "going to",
-    "wanna": "want to"
-  }
-}
-```
-
-## Architecture
-
-Speak2 is structured as two Swift Package Manager targets:
-
-- **Speak2** -- the executable target. Menu-bar app entry point, SwiftUI settings window, glow-bar overlay, and hotkey registration.
-- **Speak2Kit** -- shared library. Models, transcription logic, audio recording (`AVAudioEngine`), configuration, and history persistence.
-
-Recording flow: global hotkey triggers `AVAudioEngine` capture, audio is transcribed on-device via FluidAudio's Parakeet model, then the result is pasted at the cursor using a simulated `Cmd+V` via `CGEvent` (or copied to the clipboard).
+That's it. You talk, it types.
 
 ## License
 
-[MIT](LICENSE)
+MIT

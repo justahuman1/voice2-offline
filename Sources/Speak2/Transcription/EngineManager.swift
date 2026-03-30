@@ -12,6 +12,7 @@ final class EngineManager {
         self.appState = appState
     }
 
+    /// Load model from local cache only — no network access.
     func loadModel(version: ParakeetVersion) {
         loadTask?.cancel()
         loadTask = nil
@@ -21,7 +22,36 @@ final class EngineManager {
         loadTask = Task {
             let newEngine = ParakeetEngine(version: version)
             do {
-                try await newEngine.loadModel()
+                try await newEngine.loadFromCache()
+                guard !Task.isCancelled else { return }
+                self.engine = newEngine
+                self.appState.engineLoadingState = .loaded
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.appState.engineLoadingState = .notDownloaded
+            }
+        }
+    }
+
+    /// Download model from HuggingFace, then load from cache.
+    func downloadAndLoadModel(version: ParakeetVersion) {
+        loadTask?.cancel()
+        loadTask = nil
+        unloadModel()
+
+        appState.engineLoadingState = .downloading(progress: 0)
+        loadTask = Task {
+            let newEngine = ParakeetEngine(version: version)
+            do {
+                try await newEngine.downloadModel { [weak self] progress in
+                    Task { @MainActor in
+                        self?.appState.engineLoadingState = .downloading(progress: progress.fractionCompleted)
+                    }
+                }
+                guard !Task.isCancelled else { return }
+
+                self.appState.engineLoadingState = .loading
+                try await newEngine.loadFromCache()
                 guard !Task.isCancelled else { return }
                 self.engine = newEngine
                 self.appState.engineLoadingState = .loaded

@@ -38,8 +38,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if engineManager.isModelDownloaded(version: appState.selectedVersion) {
             appState.engineLoadingState = .downloaded
+            engineManager.loadModel(version: appState.selectedVersion)
+        } else {
+            engineManager.downloadAndLoadModel(version: appState.selectedVersion)
         }
-        engineManager.loadModel(version: appState.selectedVersion)
 
     }
 

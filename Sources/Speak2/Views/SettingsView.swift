@@ -103,8 +103,7 @@ struct SettingsView: View {
         if engineManager.isModelDownloaded(version: version) {
             engineManager.loadModel(version: version)
         } else {
-            // TODO: trigger download flow
-            appState.engineLoadingState = .notDownloaded
+            engineManager.downloadAndLoadModel(version: version)
         }
         refreshDownloadedState()
     }

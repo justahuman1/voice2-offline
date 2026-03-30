@@ -2,7 +2,7 @@ import FluidAudio
 import Foundation
 import Speak2Kit
 
-final class ParakeetEngine: TranscriptionEngine {
+final class ParakeetEngine {
     private let version: ParakeetVersion
     private var asrManager: AsrManager?
 
@@ -12,17 +12,22 @@ final class ParakeetEngine: TranscriptionEngine {
         self.version = version
     }
 
-    func loadModel() async throws {
-        let manager = AsrManager()
-
-        let modelVersion: AsrModelVersion = switch version {
+    private var modelVersion: AsrModelVersion {
+        switch version {
         case .v2: .v2
         case .v3: .v3
         }
+    }
 
-        let models = try await AsrModels.downloadAndLoad(version: modelVersion)
+    func loadFromCache() async throws {
+        let models = try await AsrModels.loadFromCache(version: modelVersion)
+        let manager = AsrManager()
         try await manager.initialize(models: models)
         self.asrManager = manager
+    }
+
+    func downloadModel(progressHandler: DownloadUtils.ProgressHandler? = nil) async throws {
+        try await AsrModels.download(version: modelVersion, progressHandler: progressHandler)
     }
 
     func unloadModel() {
