@@ -76,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startRecording() {
         appState.recordingState = .recording
-        glowOverlay.show(state: .recording)
+        glowOverlay.show(state: .recording, glowColor: appState.glowColor)
         hotkeyManager.installEscapeMonitor()
 
         Task {
@@ -85,7 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     Task { @MainActor in
                         guard let self else { return }
                         self.appState.audioLevel = Double(level)
-                        self.glowOverlay.show(state: .recording, audioLevel: CGFloat(level))
+                        self.glowOverlay.show(state: .recording, glowColor: self.appState.glowColor, audioLevel: CGFloat(level))
                     }
                 }
             } catch {

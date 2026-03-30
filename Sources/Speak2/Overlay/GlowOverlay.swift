@@ -1,5 +1,6 @@
 import AppKit
 import QuartzCore
+import Speak2Kit
 
 enum OverlayState {
     case recording
@@ -9,13 +10,25 @@ enum OverlayState {
     case cancelled
 }
 
+extension GlowColor {
+    var nsColor: NSColor {
+        switch self {
+        case .cyan:   return NSColor(red: 0.0, green: 0.749, blue: 1.0, alpha: 1.0)
+        case .purple: return NSColor(red: 0.749, green: 0.353, blue: 0.949, alpha: 1.0)
+        case .green:  return NSColor(red: 0.188, green: 0.82, blue: 0.345, alpha: 1.0)
+        case .pink:   return NSColor(red: 1.0, green: 0.216, blue: 0.373, alpha: 1.0)
+        case .orange: return NSColor(red: 1.0, green: 0.624, blue: 0.039, alpha: 1.0)
+        case .system: return NSColor.controlAccentColor
+        }
+    }
+}
+
 final class GlowOverlay {
-    var recordingColor: NSColor = NSColor(red: 0.0, green: 0.749, blue: 1.0, alpha: 1.0) // #00BFFF
 
     private var window: NSWindow?
     private var gradientLayer: CAGradientLayer?
 
-    func show(state: OverlayState, audioLevel: CGFloat = 0.0) {
+    func show(state: OverlayState, glowColor: GlowColor = .cyan, audioLevel: CGFloat = 0.0) {
         setupWindowIfNeeded()
         repositionToMainScreen()
 
@@ -24,7 +37,7 @@ final class GlowOverlay {
         let color: NSColor
         switch state {
         case .recording:
-            color = recordingColor
+            color = glowColor.nsColor
         case .processing:
             color = NSColor(red: 1.0, green: 0.69, blue: 0.125, alpha: 1.0) // #FFB020
         case .done:

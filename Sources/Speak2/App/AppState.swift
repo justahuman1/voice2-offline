@@ -45,5 +45,9 @@ final class AppState {
            let version = ParakeetVersion(rawValue: raw) {
             self.selectedVersion = version
         }
+        if let raw = defaults.string(forKey: "glowColor"),
+           let color = GlowColor(rawValue: raw) {
+            self.glowColor = color
+        }
     }
 }
