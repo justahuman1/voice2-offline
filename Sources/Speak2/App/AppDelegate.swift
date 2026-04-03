@@ -26,6 +26,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = buildMenu()
 
         hotkeyManager.onToggleRecording = { [weak self] in self?.handleToggleHotkey() }
+        hotkeyManager.onPushToTalkDown = { [weak self] in self?.handlePushToTalkDown() }
+        hotkeyManager.onPushToTalkUp = { [weak self] in self?.handlePushToTalkUp() }
         hotkeyManager.onEscapePressed = { [weak self] in self?.handleEscape() }
         hotkeyManager.onShowHistory = { [weak self] in self?.openHistory() }
         hotkeyManager.onPasteLastTranscription = { [weak self] in
@@ -59,6 +61,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             cancelTransientTimer()
             startRecording()
         }
+    }
+
+    private func handlePushToTalkDown() {
+        switch appState.recordingState {
+        case .idle:
+            startRecording()
+        case .done, .error, .cancelled:
+            cancelTransientTimer()
+            startRecording()
+        default:
+            return
+        }
+    }
+
+    private func handlePushToTalkUp() {
+        guard appState.recordingState == .recording else { return }
+        stopAndTranscribe()
     }
 
     private func handleEscape() {

@@ -4,6 +4,7 @@ import KeyboardShortcuts
 extension KeyboardShortcuts.Name {
     static let toggleRecording = Self("toggleRecording")
     static let toggleRecordingAlt = Self("toggleRecordingAlt")
+    static let pushToTalk = Self("pushToTalk")
     static let showHistory = Self("showHistory")
     static let pasteLastTranscription = Self("pasteLastTranscription")
 }
@@ -11,6 +12,8 @@ extension KeyboardShortcuts.Name {
 @MainActor
 final class HotkeyManager {
     var onToggleRecording: (() -> Void)?
+    var onPushToTalkDown: (() -> Void)?
+    var onPushToTalkUp: (() -> Void)?
     var onShowHistory: (() -> Void)?
     var onPasteLastTranscription: (() -> Void)?
     var onEscapePressed: (() -> Void)?
@@ -20,6 +23,7 @@ final class HotkeyManager {
     init() {
         KeyboardShortcuts.setShortcut(.init(.x, modifiers: [.command, .option]), for: .toggleRecording)
         KeyboardShortcuts.setShortcut(.init(.period, modifiers: [.command, .option]), for: .toggleRecordingAlt)
+        KeyboardShortcuts.setShortcut(.init(.x, modifiers: [.command, .option, .shift]), for: .pushToTalk)
         KeyboardShortcuts.setShortcut(.init(.a, modifiers: [.command, .option]), for: .showHistory)
         KeyboardShortcuts.setShortcut(.init(.v, modifiers: [.command, .option]), for: .pasteLastTranscription)
 
@@ -28,6 +32,12 @@ final class HotkeyManager {
         }
         KeyboardShortcuts.onKeyUp(for: .toggleRecordingAlt) { [weak self] in
             self?.onToggleRecording?()
+        }
+        KeyboardShortcuts.onKeyDown(for: .pushToTalk) { [weak self] in
+            self?.onPushToTalkDown?()
+        }
+        KeyboardShortcuts.onKeyUp(for: .pushToTalk) { [weak self] in
+            self?.onPushToTalkUp?()
         }
         KeyboardShortcuts.onKeyUp(for: .showHistory) { [weak self] in
             self?.onShowHistory?()
