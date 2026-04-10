@@ -70,16 +70,25 @@ struct SettingsView: View {
             Section("Keyboard Shortcuts") {
                 shortcutRow("Toggle Recording", name: .toggleRecording)
                 shortcutRow("Toggle Recording Alt", name: .toggleRecordingAlt)
+                shortcutRow("Push-to-Talk (combo)", name: .pushToTalk)
                 shortcutRow("Show History", name: .showHistory)
                 shortcutRow("Paste Last", name: .pasteLastTranscription)
+
+                Picker("Push-to-Talk Key", selection: Bindable(appState).pushToTalkKey) {
+                    ForEach(PushToTalkKey.allCases, id: \.self) { key in
+                        Text(key.label).tag(key)
+                    }
+                }
 
                 Button("Reset to Defaults") {
                     KeyboardShortcuts.reset([
                         .toggleRecording,
                         .toggleRecordingAlt,
+                        .pushToTalk,
                         .showHistory,
                         .pasteLastTranscription,
                     ])
+                    appState.pushToTalkKey = .fn
                 }
             }
         }

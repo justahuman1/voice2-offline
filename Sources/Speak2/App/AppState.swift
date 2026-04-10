@@ -2,6 +2,24 @@ import Foundation
 import Speak2Kit
 import SwiftUI
 
+enum PushToTalkKey: String, CaseIterable {
+    case none = "none"
+    case fn = "fn"
+    case rightCommand = "rightCommand"
+    case rightOption = "rightOption"
+    case rightControl = "rightControl"
+
+    var label: String {
+        switch self {
+        case .none: return "Disabled"
+        case .fn: return "fn"
+        case .rightCommand: return "Right ⌘"
+        case .rightOption: return "Right ⌥"
+        case .rightControl: return "Right ⌃"
+        }
+    }
+}
+
 enum RecordingState {
     case idle
     case recording
@@ -32,6 +50,13 @@ final class AppState {
         didSet { UserDefaults.standard.set(autoPasteEnabled, forKey: "autoPasteEnabled") }
     }
     var glowColor: GlowColor = .cyan
+    var onPushToTalkKeyChanged: ((PushToTalkKey) -> Void)?
+    var pushToTalkKey: PushToTalkKey = .fn {
+        didSet {
+            UserDefaults.standard.set(pushToTalkKey.rawValue, forKey: "pushToTalkKey")
+            onPushToTalkKeyChanged?(pushToTalkKey)
+        }
+    }
     var recentTranscription: String?
 
     init() {
@@ -48,6 +73,10 @@ final class AppState {
         if let raw = defaults.string(forKey: "glowColor"),
            let color = GlowColor(rawValue: raw) {
             self.glowColor = color
+        }
+        if let raw = defaults.string(forKey: "pushToTalkKey"),
+           let key = PushToTalkKey(rawValue: raw) {
+            self.pushToTalkKey = key
         }
     }
 }

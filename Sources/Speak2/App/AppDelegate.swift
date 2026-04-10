@@ -35,6 +35,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             PasteService.pasteAtCursor(text, autoPasteEnabled: true)
         }
 
+        hotkeyManager.setPushToTalkKey(appState.pushToTalkKey)
+        appState.onPushToTalkKeyChanged = { [weak self] key in
+            self?.hotkeyManager.setPushToTalkKey(key)
+        }
         TranscriptionHistory.shared.load()
         checkAccessibilityPermission()
 
@@ -93,9 +97,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private var loadingIndicatorTask: Task<Void, Never>?
+
+    private func showLoadingIndicator() {
+        guard loadingIndicatorTask == nil else { return }
+        glowOverlay.show(state: .loading)
+        loadingIndicatorTask = Task {
+            while appState.engineLoadingState != .loaded {
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+            glowOverlay.hide()
+            loadingIndicatorTask = nil
+        }
+    }
+
     // MARK: - Recording Flow
 
     private func startRecording() {
+        guard appState.engineLoadingState == .loaded else {
+            showLoadingIndicator()
+            return
+        }
         appState.recordingState = .recording
         glowOverlay.show(state: .recording, glowColor: appState.glowColor)
         hotkeyManager.installEscapeMonitor()

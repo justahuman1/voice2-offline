@@ -3,6 +3,7 @@ import QuartzCore
 import Speak2Kit
 
 enum OverlayState {
+    case loading
     case recording
     case processing
     case done
@@ -31,6 +32,7 @@ final class GlowOverlay {
     private var window: NSWindow?
     private var bloomLayer: CAGradientLayer?
     private var coreLayer: CAGradientLayer?
+    private var textLayer: CATextLayer?
     private var smoothedLevel: CGFloat = 0.0
 
     private static func shiftedColor(_ color: NSColor) -> NSColor {
@@ -50,6 +52,8 @@ final class GlowOverlay {
 
         let color: NSColor
         switch state {
+        case .loading:
+            color = NSColor(red: 0.6, green: 0.6, blue: 0.7, alpha: 1.0)
         case .recording:
             color = glowColor.nsColor
         case .processing:
@@ -69,6 +73,24 @@ final class GlowOverlay {
         core.removeAllAnimations()
 
         switch state {
+        case .loading:
+            smoothedLevel = 0.0
+            let shifted = Self.shiftedColor(color).cgColor
+            core.colors = [NSColor.clear.cgColor, cgColor, cgColor, NSColor.clear.cgColor]
+            core.locations = [0.0, 0.35, 0.65, 1.0]
+            core.opacity = 0.4
+            bloom.colors = [NSColor.clear.cgColor, shifted, shifted, NSColor.clear.cgColor]
+            bloom.locations = [0.0, 0.3, 0.7, 1.0]
+            bloom.opacity = 0.2
+
+            let pulse = CABasicAnimation(keyPath: "opacity")
+            pulse.fromValue = 0.2
+            pulse.toValue = 0.5
+            pulse.duration = 1.5
+            pulse.autoreverses = true
+            pulse.repeatCount = .infinity
+            core.add(pulse, forKey: "pulse")
+
         case .recording:
             let level = min(max(audioLevel, 0.0), 1.0)
             // Smooth the level for the bloom layer (trailing glow)
@@ -149,6 +171,7 @@ final class GlowOverlay {
             break
         }
 
+        textLayer?.isHidden = state != .loading
         window.orderFront(nil)
     }
 
@@ -245,9 +268,21 @@ final class GlowOverlay {
         core.opacity = 0
         contentView.layer?.addSublayer(core)
 
+        let text = CATextLayer()
+        text.string = "Loading model…"
+        text.font = NSFont.systemFont(ofSize: 11, weight: .medium)
+        text.fontSize = 11
+        text.foregroundColor = NSColor.white.withAlphaComponent(0.7).cgColor
+        text.alignmentMode = .center
+        text.contentsScale = (NSScreen.main?.backingScaleFactor ?? 2.0)
+        text.frame = CGRect(x: 0, y: 4, width: contentView.bounds.width, height: 16)
+        text.isHidden = true
+        contentView.layer?.addSublayer(text)
+
         self.window = win
         self.bloomLayer = bloom
         self.coreLayer = core
+        self.textLayer = text
     }
 
     private func repositionToMainScreen() {
@@ -263,5 +298,6 @@ final class GlowOverlay {
 
         let coreHeight: CGFloat = 10
         coreLayer?.frame = CGRect(x: 0, y: 0, width: bounds.width, height: coreHeight)
+        textLayer?.frame = CGRect(x: 0, y: 4, width: bounds.width, height: 16)
     }
 }

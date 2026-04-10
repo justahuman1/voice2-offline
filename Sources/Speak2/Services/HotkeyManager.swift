@@ -19,6 +19,9 @@ final class HotkeyManager {
     var onEscapePressed: (() -> Void)?
 
     private var escapeMonitor: Any?
+    private var pttMonitor: Any?
+    private var pttDown = false
+    private var pttKey: PushToTalkKey = .none
 
     init() {
         KeyboardShortcuts.setShortcut(.init(.x, modifiers: [.command, .option]), for: .toggleRecording)
@@ -47,6 +50,27 @@ final class HotkeyManager {
         }
     }
 
+    func setPushToTalkKey(_ key: PushToTalkKey) {
+        pttKey = key
+        pttDown = false
+        if let monitor = pttMonitor {
+            NSEvent.removeMonitor(monitor)
+            pttMonitor = nil
+        }
+        guard key != .none else { return }
+        pttMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            guard let self else { return }
+            let pressed = self.isKeyPressed(key, event: event)
+            if pressed && !self.pttDown {
+                self.pttDown = true
+                self.onPushToTalkDown?()
+            } else if !pressed && self.pttDown {
+                self.pttDown = false
+                self.onPushToTalkUp?()
+            }
+        }
+    }
+
     func installEscapeMonitor() {
         guard escapeMonitor == nil else { return }
         escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -60,6 +84,21 @@ final class HotkeyManager {
         if let monitor = escapeMonitor {
             NSEvent.removeMonitor(monitor)
             escapeMonitor = nil
+        }
+    }
+
+    private func isKeyPressed(_ key: PushToTalkKey, event: NSEvent) -> Bool {
+        switch key {
+        case .none:
+            return false
+        case .fn:
+            return event.modifierFlags.contains(.function)
+        case .rightCommand:
+            return event.keyCode == 54 && event.modifierFlags.contains(.command)
+        case .rightOption:
+            return event.keyCode == 61 && event.modifierFlags.contains(.option)
+        case .rightControl:
+            return event.keyCode == 62 && event.modifierFlags.contains(.control)
         }
     }
 }
