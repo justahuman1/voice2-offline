@@ -1,4 +1,6 @@
 import AVFoundation
+import CoreAudio
+import AudioToolbox
 
 actor AudioRecorder {
     // MARK: - Constants
@@ -49,7 +51,7 @@ actor AudioRecorder {
 
     // MARK: - Recording
 
-    func startRecording(onLevelUpdate: @Sendable @escaping (Float) -> Void) throws {
+    func startRecording(deviceID: AudioDeviceID?, onLevelUpdate: @Sendable @escaping (Float) -> Void) throws {
         guard !isRecording else { return }
 
         audioBuffer.clear()
@@ -57,6 +59,17 @@ actor AudioRecorder {
 
         let engine = AVAudioEngine()
         let inputNode = engine.inputNode
+
+        // Apply the user-selected input device to the input node's audio unit
+        // before querying its format, so the correct sample rate drives resampling.
+        if let deviceID, let audioUnit = inputNode.audioUnit {
+            var dev = deviceID
+            AudioUnitSetProperty(audioUnit,
+                kAudioOutputUnitProperty_CurrentDevice,
+                kAudioUnitScope_Global, 0,
+                &dev, UInt32(MemoryLayout<AudioDeviceID>.size))
+        }
+
         let deviceFormat = inputNode.outputFormat(forBus: 0)
         let deviceSampleRate = deviceFormat.sampleRate
 

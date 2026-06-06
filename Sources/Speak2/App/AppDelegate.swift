@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import CoreAudio
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -122,9 +123,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         glowOverlay.show(state: .recording, glowColor: appState.glowColor)
         hotkeyManager.installEscapeMonitor()
 
+        let mgr = AudioDeviceManager.shared
+        mgr.refreshDevices()
+        let deviceID: AudioDeviceID? = mgr.useSystemDefaultInput ? nil
+            : mgr.availableInputDevices.first { $0.uid == mgr.selectedInputDeviceUID }?.id
+
         Task {
             do {
-                try await audioRecorder.startRecording { [weak self] level in
+                try await audioRecorder.startRecording(deviceID: deviceID) { [weak self] level in
                     Task { @MainActor in
                         guard let self else { return }
                         self.appState.audioLevel = Double(level)
