@@ -70,9 +70,6 @@ actor AudioRecorder {
                 &dev, UInt32(MemoryLayout<AudioDeviceID>.size))
         }
 
-        let deviceFormat = inputNode.outputFormat(forBus: 0)
-        let deviceSampleRate = deviceFormat.sampleRate
-
         engine.prepare()
 
         let buffer = audioBuffer
@@ -81,13 +78,17 @@ actor AudioRecorder {
         let silenceDB = silenceThresholdDB
         let levelCallback = onLevelUpdate
 
-        inputNode.installTap(onBus: 0, bufferSize: bufferSize, format: deviceFormat) { pcmBuffer, _ in
+        // Pass format: nil so the tap uses the input node's actual hardware format.
+        // After switching the AUHAL device, a separately-queried outputFormat can be
+        // stale and trigger a format-mismatch crash. Derive the sample rate from each
+        // buffer instead.
+        inputNode.installTap(onBus: 0, bufferSize: bufferSize, format: nil) { pcmBuffer, _ in
             guard let channelData = pcmBuffer.floatChannelData?[0] else { return }
             let frameCount = Int(pcmBuffer.frameLength)
 
             // Resample to 16kHz via stride if needed
             let resampled: [Float]
-            let ratio = deviceSampleRate / targetRate
+            let ratio = pcmBuffer.format.sampleRate / targetRate
             if ratio > 1.0 {
                 let stride = Int(ratio)
                 resampled = Swift.stride(from: 0, to: frameCount, by: stride).map { channelData[$0] }
