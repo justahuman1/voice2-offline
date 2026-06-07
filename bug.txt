@@ -1,0 +1,58 @@
+*** Terminating app due to uncaught exception 'com.apple.coreaudio.avfaudio', reason: 'required condition is false: format.sampleRate == inputHWFormat.sampleRate'
+*** First throw call stack:
+(
+        0   CoreFoundation                      0x0000000189db6bf0 __exceptionPreprocess + 176
+        1   libobjc.A.dylib                     0x000000018984291c objc_exception_throw + 88
+        2   CoreFoundation                      0x0000000189db6ae0 +[NSException exceptionWithName:reason:userInfo:] + 0
+        3   AVFAudio                            0x000000022f357f08 _ZN17AVAudioEngineImpl16InstallTapOnNodeEP11AVAudioNodemjP13AVAudioFormatU13block_pointerFvP16AVAudioPCMBufferP11AVAudioTimeE + 1280
+        4   AVFAudio                            0x000000022f3363c8 -[AVAudioNode installTapOnBus:bufferSize:format:block:] + 608
+        5   Speak2                              0x0000000100cc6760 $s6Speak213AudioRecorderC14startRecording8deviceID13onLevelUpdateys6UInt32VSg_ySfYbctKF + 908
+        6   Speak2                              0x0000000100cb15b8 $s6Speak211AppDelegateC14startRecording33_1567D8B984431080FB69FA033FC50FC6LLyyFyyYacfU0_TY1_ + 92
+        7   Speak2                              0x0000000100cb3211 $s6Speak211AppDelegateC14startRecording33_1567D8B984431080FB69FA033FC50FC6LLyyFyyYacfU0_TATQ0_ + 1
+        8   Speak2                              0x00000001003b2071 $sxIeAgHr_xs5Error_pIegHrzo_s8SendableRzs5NeverORs_r0_lTRTQ0_ + 1
+        9   Speak2                              0x00000001003b2645 $sxIeAgHr_xs5Error_pIegHrzo_s8SendableRzs5NeverORs_r0_lTRTA.48TQ0_ + 1
+        10  libswift_Concurrency.dylib          0x000000028dd5aec5 _ZL23completeTaskWithClosurePN5swift12AsyncContextEPNS_10SwiftErrorE + 1
+)
+libc++abi: terminating due to uncaught exception of type NSException
+E5RT encountered an STL exception. msg = Failed to PropagateInputTensorShapes: std::runtime_error during type inference for ios17.slice_by_index: zero shape error.
+💣 Program crashed: Aborted at 0x0000000189c505e8
+
+Platform: arm64 macOS 26.4 (25E246)
+
+Thread 10 crashed:
+
+  0 0x0000000189c505e8 __pthread_kill + 8 in libsystem_kernel.dylib
+  1 0x0000000189b92790 abort + 148 in libsystem_c.dylib
+  2 0x0000000189c4272c __abort_message + 132 in libc++abi.dylib
+  3 0x0000000189c2f588 demangling_terminate_handler() + 296 in libc++abi.dylib
+  4 0x000000018984c894 _objc_terminate() + 156 in libobjc.A.dylib
+  5 0x0000000189c3f75c std::__terminate(void (*)()) + 16 in libc++abi.dylib
+  6 0x0000000189c41be4 __cxxabiv1::failed_throw(__cxxabiv1::__cxa_exception*) + 88 in libc++abi.dylib
+  7 0x0000000189c2e09c __cxa_throw + 92 in libc++abi.dylib
+  8 0x0000000189842a84 objc_exception_throw + 448 in libobjc.A.dylib
+  9 0x0000000189db6ae0 +[NSException raise:format:] + 128 in CoreFoundation
+ 10 0x000000022f357f08 AVAudioEngineImpl::InstallTapOnNode(AVAudioNode*, unsigned long, unsigned int, AVAudioFormat*, void (AVAudioPCMBuffer*, AVAudioTime*) block_pointer) + 1280 in AVFAudio
+ 11 0x000000022f3363c8 -[AVAudioNode installTapOnBus:bufferSize:format:block:] + 608 in AVFAudio
+ 12 AudioRecorder.startRecording(deviceID:onLevelUpdate:) + 908 in Speak2 at /Users/sai/Code/apps/voice2-offline/Sources/Speak2/Audio/AudioRecorder.swift:84:19
+
+    82│         let levelCallback = onLevelUpdate
+    83│
+    84│         inputNode.installTap(onBus: 0, bufferSize: bufferSize, format: deviceFormat) { pcmBuffer, _ in
+      │                   ▲
+    85│             guard let channelData = pcmBuffer.floatChannelData?[0] else { return }
+    86│             let frameCount = Int(pcmBuffer.frameLength)
+
+ 13 closure #2 in AppDelegate.startRecording() + 92 in Speak2 at /Users/sai/Code/apps/voice2-offline/Sources/Speak2/App/AppDelegate.swift:133:41
+
+   131│         Task {
+   132│             do {
+   133│                 try await audioRecorder.startRecording(deviceID: deviceID) { [weak self] level in
+      │                                         ▲
+   134│                     Task { @MainActor in
+   135│                         guard let self else { return }
+
+...
+
+Backtrace took 1.15s
+
+./run.sh: line 3: 94557 Abort trap: 6           .build/debug/Speak2
