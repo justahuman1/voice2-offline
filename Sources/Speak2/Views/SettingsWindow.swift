@@ -3,6 +3,7 @@ import SwiftUI
 
 enum SettingsTab: Int, CaseIterable {
     case settings
+    case vocabulary
     case history
     case statistics
     case audioDevices
@@ -24,6 +25,10 @@ struct SettingsContentView: View {
             SettingsView(appState: appState, engineManager: engineManager)
                 .tabItem { Label("Settings", systemImage: "gear") }
                 .tag(SettingsTab.settings)
+
+            VocabularyView()
+                .tabItem { Label("Vocabulary", systemImage: "text.book.closed") }
+                .tag(SettingsTab.vocabulary)
 
             HistoryView()
                 .tabItem { Label("History", systemImage: "clock") }
@@ -68,6 +73,7 @@ final class SettingsWindow {
 
     func show() {
         window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
     }
 
     func showHistoryTab() {

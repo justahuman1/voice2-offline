@@ -71,4 +71,51 @@ struct TextReplacementTests {
         let result = TextReplacementEngine.process("\"- fix typo helo\"", replacements: ["helo": "hello"])
         #expect(result == "fix typo hello")
     }
+
+    @Test func matchingIsCaseInsensitive() {
+        let result = TextReplacementEngine.process("Use GIT and Git", replacements: ["git": "GitHub"])
+        #expect(result == "Use GitHub and GitHub")
+    }
+
+    @Test func phraseMatchesAtBoundaries() {
+        let result = TextReplacementEngine.process("I use visual studio code, daily.", replacements: ["Visual Studio Code": "VS Code"])
+        #expect(result == "I use VS Code, daily.")
+    }
+
+    @Test func longerOverlappingPhraseWins() {
+        let result = TextReplacementEngine.process(
+            "new york and york",
+            replacements: ["york": "Yorkshire", "new york": "NYC"]
+        )
+        #expect(result == "NYC and Yorkshire")
+    }
+
+    @Test func doesNotReplaceInsideLargerWords() {
+        let result = TextReplacementEngine.process("cat concatenate bobcat cat", replacements: ["cat": "dog"])
+        #expect(result == "dog concatenate bobcat dog")
+    }
+
+    @Test func pipeSeparatedAlternatives() {
+        let result = TextReplacementEngine.process(
+            "Ty K V, Ty KV, and Thai KV",
+            replacements: ["Ty K V | Ty KV | Thai KV": "TiKV"]
+        )
+        #expect(result == "TiKV, TiKV, and TiKV")
+    }
+
+    @Test func commaCanBePartOfPhrase() {
+        let result = TextReplacementEngine.process(
+            "hello, world",
+            replacements: ["hello, world | hello there": "greeting"]
+        )
+        #expect(result == "greeting")
+    }
+
+    @Test func normalizesPunctuationAndWhitespaceBetweenWords() {
+        let result = TextReplacementEngine.process(
+            "visual, studio   code",
+            replacements: ["visual studio code": "VS Code"]
+        )
+        #expect(result == "VS Code")
+    }
 }
