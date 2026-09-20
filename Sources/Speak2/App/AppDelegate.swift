@@ -41,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.hotkeyManager.setPushToTalkKey(key)
         }
         TranscriptionHistory.shared.load()
+        AudioDeviceManager.shared.loadPreferences()
         checkAccessibilityPermission()
 
         if engineManager.isModelDownloaded(version: appState.selectedVersion) {
@@ -125,8 +126,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let mgr = AudioDeviceManager.shared
         mgr.refreshDevices()
-        let deviceID: AudioDeviceID? = mgr.useSystemDefaultInput ? nil
-            : mgr.availableInputDevices.first { $0.uid == mgr.selectedInputDeviceUID }?.id
+
+        let deviceID: AudioDeviceID?
+        if mgr.useSystemDefaultInput {
+            NSLog("[AudioDebug] Input mode: system default")
+            deviceID = nil
+        } else if let device = mgr.availableInputDevices.first(where: {
+            $0.uid == mgr.selectedInputDeviceUID
+        }) {
+            NSLog("[AudioDebug] Requested input: name=%@ uid=%@ id=%u", device.name, device.uid, device.id)
+            deviceID = device.id
+        } else {
+            appState.recordingState = .error
+            glowOverlay.show(state: .error)
+            NotificationService.shared.showError(message: "The selected input device is unavailable.")
+            hotkeyManager.removeEscapeMonitor()
+            scheduleTransientTimer(duration: 0.6)
+            return
+        }
 
         Task {
             do {
@@ -138,6 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 }
             } catch {
+                NSLog("[AudioDebug] Recording start failed: %@", error as NSError)
                 appState.recordingState = .error
                 glowOverlay.show(state: .error)
                 NotificationService.shared.showError(message: error.localizedDescription)
