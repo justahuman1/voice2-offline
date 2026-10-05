@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var engineManager = EngineManager(appState: appState)
     private let glowOverlay = GlowOverlay()
     private let hotkeyManager = HotkeyManager()
+    private lazy var speechService = SpeechService(appState: appState, glowOverlay: glowOverlay)
     private var transientTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -34,6 +35,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager.onPasteLastTranscription = { [weak self] in
             guard let self, let text = self.appState.recentTranscription else { return }
             PasteService.pasteAtCursor(text, autoPasteEnabled: true)
+        }
+        hotkeyManager.onReadSelection = { [weak self] in
+            NSLog("[ReadSelection] Hotkey fired")
+            guard let self else { return }
+            if let error = self.speechService.toggleSpeakingSelection() {
+                NotificationService.shared.showError(message: error)
+            }
         }
 
         hotkeyManager.setPushToTalkKey(appState.pushToTalkKey)

@@ -41,6 +41,22 @@ struct SettingsView: View {
                 }
             }
 
+            // MARK: Text-to-Speech Model
+            Section("Text-to-Speech Model") {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Kokoro-82M · MLX")
+                            .font(.headline)
+                        Text("Local neural speech · voice af_heart · ~310 MB")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    kokoroStateView
+                }
+                .padding(.vertical, 4)
+            }
+
             // MARK: Glow Color
             Section("Glow Color") {
                 HStack(spacing: 12) {
@@ -73,6 +89,7 @@ struct SettingsView: View {
                 shortcutRow("Push-to-Talk (combo)", name: .pushToTalk)
                 shortcutRow("Show History", name: .showHistory)
                 shortcutRow("Paste Last", name: .pasteLastTranscription)
+                shortcutRow("Read Selection / Stop", name: .readSelection)
 
                 Picker("Push-to-Talk Key", selection: Bindable(appState).pushToTalkKey) {
                     ForEach(PushToTalkKey.allCases, id: \.self) { key in
@@ -87,6 +104,7 @@ struct SettingsView: View {
                         .pushToTalk,
                         .showHistory,
                         .pasteLastTranscription,
+                        .readSelection,
                     ])
                     appState.pushToTalkKey = .fn
                 }
@@ -95,6 +113,7 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .onAppear {
             refreshDownloadedState()
+            refreshKokoroState()
         }
     }
 
@@ -104,6 +123,66 @@ struct SettingsView: View {
             Spacer()
             ShortcutRecorder(name: name)
                 .frame(width: 160)
+        }
+    }
+
+    @ViewBuilder
+    private var kokoroStateView: some View {
+        switch appState.kokoroModelState {
+        case .notDownloaded:
+            Button("Download") {
+                downloadKokoroModel()
+            }
+        case .downloading(let status):
+            VStack(spacing: 4) {
+                ProgressView()
+                    .controlSize(.small)
+                Text(status)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 180, alignment: .trailing)
+            }
+        case .downloaded:
+            Label("Downloaded", systemImage: "checkmark.circle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .loading:
+            VStack(spacing: 4) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Loading…")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        case .loaded:
+            Label("Loaded", systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+        }
+    }
+
+    private func refreshKokoroState() {
+        Task { @MainActor in
+            if await KokoroSpeechEngine.shared.isDownloaded(), appState.kokoroModelState == .notDownloaded {
+                appState.kokoroModelState = .downloaded
+            }
+        }
+    }
+
+    private func downloadKokoroModel() {
+        appState.kokoroModelState = .downloading(status: "Preparing download…")
+        Task { @MainActor in
+            do {
+                try await KokoroSpeechEngine.shared.downloadAssets { status in
+                    appState.kokoroModelState = .downloading(status: status)
+                }
+                appState.kokoroModelState = .downloaded
+            } catch {
+                appState.kokoroModelState = await KokoroSpeechEngine.shared.isDownloaded() ? .downloaded : .notDownloaded
+                NSLog("[Kokoro] Download failed: %@", error.localizedDescription)
+                NotificationService.shared.showError(message: "Kokoro download failed: \(error.localizedDescription)")
+            }
         }
     }
 

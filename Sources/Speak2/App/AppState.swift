@@ -37,6 +37,14 @@ enum EngineLoadingState: Equatable {
     case loaded
 }
 
+enum KokoroModelState: Equatable {
+    case notDownloaded
+    case downloading(status: String)
+    case downloaded
+    case loading
+    case loaded
+}
+
 @Observable
 @MainActor
 final class AppState {
@@ -46,6 +54,7 @@ final class AppState {
         didSet { UserDefaults.standard.set(selectedVersion.rawValue, forKey: "selectedParakeetVersion") }
     }
     var engineLoadingState: EngineLoadingState = .notDownloaded
+    var kokoroModelState: KokoroModelState = .notDownloaded
     var autoPasteEnabled: Bool {
         didSet { UserDefaults.standard.set(autoPasteEnabled, forKey: "autoPasteEnabled") }
     }

@@ -2,7 +2,7 @@
 
 Offline speech-to-text for macOS. Press a hotkey, talk, release — transcribed text is pasted at your cursor.
 
-Everything runs locally on your Mac. No accounts, no API keys, no network requests.
+After downloading the models, everything runs locally on your Mac. No accounts or API keys.
 
 
 https://github.com/user-attachments/assets/3bbdbff9-a87c-42c9-9029-6540bf22ec9d
@@ -20,24 +20,38 @@ https://github.com/user-attachments/assets/3bbdbff9-a87c-42c9-9029-6540bf22ec9d
 
 Requires macOS 14+ and Swift 5.9+.
 
+Run setup once to install Xcode's Metal Toolchain and perform the slow initial build:
+
 ```bash
-swift build
-.build/debug/Speak2
+./run.sh setup
 ```
 
-On first run, grant **Accessibility** and **Microphone** permission to Terminal (System Settings > Privacy & Security).
+Then build and launch with:
+
+```bash
+./run.sh
+```
+
+MLX's Metal shaders must be compiled by Xcode; a plain `swift build` can compile Speak2 but will fail when Kokoro runs. Setup downloads Apple's Metal Toolchain and prebuilds the dependencies; subsequent `./run.sh` calls are incremental.
+
+On first run, grant **Accessibility** and **Microphone** permission to the terminal app you use (System Settings > Privacy & Security).
 
 ## Models
 
-The first launch downloads the Parakeet model (~600 MB) from HuggingFace. After that, the app makes zero network requests — everything runs offline.
+Speak2 uses separate local models for speech recognition and speech generation:
 
-Models are cached in `~/Library/Application Support/FluidAudio/Models/`. For airgapped machines, copy this directory from a machine that has already downloaded the models.
+| Model | Use case | Runtime | Download |
+|---|---|---|---|
+| Parakeet v2 (default) or v3 | Microphone speech → text | FluidAudio; on-device | Selected model, ~600 MB. v2 is English-focused; v3 supports 25 languages. |
+| Kokoro-82M | Selected text → speech | MLX on Apple Silicon | ~310 MB model weights plus the `af_heart` voice. |
+
+Parakeet downloads on first launch. Kokoro can be downloaded from **Settings → Text-to-Speech Model** or on the first read. After download, both models run locally. Parakeet files are cached in `~/Library/Application Support/FluidAudio/Models/`; Kokoro files are cached in `~/Library/Application Support/Speak2/Kokoro/`. For airgapped machines, copy these directories from a machine that has already downloaded the models.
 
 ## Usage
 
-Speak2 lives in the menu bar. Click the icon to configure your hotkey, pick an audio device, or browse transcription history.
+Speak2 lives in the menu bar. Click the icon to configure your hotkeys, pick an audio device, or browse transcription history. Select text in an app and press `Cmd+Option+R` to read it aloud with the local Kokoro voice; press again to stop. This does not use or modify the clipboard.
 
-That's it. You talk, it types.
+That's it. You talk, it types—and now it can talk back.
 
 ### Push-to-talk
 

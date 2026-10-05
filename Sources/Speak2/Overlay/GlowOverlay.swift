@@ -42,7 +42,12 @@ final class GlowOverlay {
         return NSColor(hue: fmod(h + hueShift, 1.0), saturation: s, brightness: b, alpha: a)
     }
 
-    func show(state: OverlayState, glowColor: GlowColor = .cyan, audioLevel: CGFloat = 0.0) {
+    func show(
+        state: OverlayState,
+        glowColor: GlowColor = .cyan,
+        audioLevel: CGFloat = 0.0,
+        message: String? = nil
+    ) {
         setupWindowIfNeeded()
         repositionToMainScreen()
 
@@ -171,6 +176,9 @@ final class GlowOverlay {
             break
         }
 
+        if state == .loading {
+            textLayer?.string = message ?? "Loading model…"
+        }
         textLayer?.isHidden = state != .loading
         window.orderFront(nil)
     }
