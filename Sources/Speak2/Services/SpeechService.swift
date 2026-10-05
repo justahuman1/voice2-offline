@@ -12,12 +12,22 @@ final class SpeechService {
     private var requestID = UUID()
 
     func stop() {
+        guard synthesisTask != nil else { return }
         requestID = UUID()
         synthesisTask?.cancel()
         synthesisTask = nil
         playback?.stop()
         playback = nil
         glowOverlay.hide()
+        // This asynchronous refresh must never update a newer speech request.
+        let stoppedID = requestID
+        Task {
+            let downloaded = await KokoroSpeechEngine.shared.isDownloaded()
+            guard self.requestID == stoppedID else { return }
+            if self.appState.kokoroModelState != .loaded {
+                self.appState.kokoroModelState = downloaded ? .downloaded : .notDownloaded
+            }
+        }
     }
 
     init(appState: AppState, glowOverlay: GlowOverlay) {
@@ -107,11 +117,14 @@ final class SpeechService {
                     try Task.checkCancellation()
                     guard self.requestID == id else { throw CancellationError() }
                     if self.playback == nil {
-                        self.playback = try SpeechPlayback(sampleRate: audio.sampleRate)
-                        self.glowOverlay.hide()
+                        self.playback = try SpeechPlayback(sampleRate: audio.sampleRate) { [weak self] level in
+                            guard let self, self.requestID == id, self.playback != nil else { return }
+                            self.glowOverlay.show(state: .speaking, glowColor: self.appState.speakingGlowColor, audioLevel: level)
+                        }
                         NSLog("[ReadSelection] Kokoro PCM playback started")
                     }
                     try self.playback?.enqueue(audio)
+                    self.glowOverlay.show(state: .speaking, glowColor: self.appState.speakingGlowColor)
                     self.appState.kokoroModelState = .loaded
                 }
                 await self.playback?.finish()

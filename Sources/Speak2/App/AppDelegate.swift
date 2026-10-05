@@ -39,6 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager.onReadSelection = { [weak self] in
             NSLog("[ReadSelection] Hotkey fired")
             guard let self else { return }
+            // Recording/transcription owns the overlay; TTS never interrupts it.
+            guard self.appState.recordingState != .recording,
+                  self.appState.recordingState != .processing,
+                  self.loadingIndicatorTask == nil else { return }
+            self.cancelTransientTimer()
+            self.appState.recordingState = .idle
             if let error = self.speechService.toggleSpeakingSelection() {
                 NotificationService.shared.showError(message: error)
             }
@@ -124,6 +130,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Recording Flow
 
     private func startRecording() {
+        // Recording wins, including when speech is still generating its first chunk.
+        cancelTransientTimer()
+        speechService.stop()
         guard appState.engineLoadingState == .loaded else {
             showLoadingIndicator()
             return

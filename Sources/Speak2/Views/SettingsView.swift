@@ -59,27 +59,8 @@ struct SettingsView: View {
 
             // MARK: Glow Color
             Section("Glow Color") {
-                HStack(spacing: 12) {
-                    ForEach(GlowColor.allCases, id: \.self) { color in
-                        Button {
-                            appState.glowColor = color
-                            UserDefaults.standard.set(color.rawValue, forKey: "glowColor")
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(color.swiftUIColor)
-                                    .frame(width: 24, height: 24)
-                                if appState.glowColor == color {
-                                    Image(systemName: "checkmark")
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .help(color.rawValue.capitalized)
-                    }
-                }
+                glowColorRow("Recording", selection: Bindable(appState).glowColor)
+                glowColorRow("Speaking", selection: Bindable(appState).speakingGlowColor)
             }
 
             // MARK: Keyboard Shortcuts
@@ -114,6 +95,32 @@ struct SettingsView: View {
         .onAppear {
             refreshDownloadedState()
             refreshKokoroState()
+        }
+    }
+
+    private func glowColorRow(_ label: String, selection: Binding<GlowColor>) -> some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .frame(width: 80, alignment: .leading)
+            ForEach(GlowColor.allCases, id: \.self) { color in
+                Button {
+                    selection.wrappedValue = color
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(color.swiftUIColor)
+                            .frame(width: 24, height: 24)
+                        if selection.wrappedValue == color {
+                            Image(systemName: "checkmark")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .help(color.rawValue.capitalized)
+                .accessibilityLabel("\(label) glow: \(color.rawValue)")
+            }
         }
     }
 

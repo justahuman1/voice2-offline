@@ -58,7 +58,12 @@ final class AppState {
     var autoPasteEnabled: Bool {
         didSet { UserDefaults.standard.set(autoPasteEnabled, forKey: "autoPasteEnabled") }
     }
-    var glowColor: GlowColor = .cyan
+    var glowColor: GlowColor = .cyan {
+        didSet { UserDefaults.standard.set(glowColor.rawValue, forKey: "glowColor") }
+    }
+    var speakingGlowColor: GlowColor = .purple {
+        didSet { UserDefaults.standard.set(speakingGlowColor.rawValue, forKey: "speakingGlowColor") }
+    }
     var onPushToTalkKeyChanged: ((PushToTalkKey) -> Void)?
     var pushToTalkKey: PushToTalkKey = .fn {
         didSet {
@@ -82,6 +87,10 @@ final class AppState {
         if let raw = defaults.string(forKey: "glowColor"),
            let color = GlowColor(rawValue: raw) {
             self.glowColor = color
+        }
+        if let raw = defaults.string(forKey: "speakingGlowColor"),
+           let color = GlowColor(rawValue: raw) {
+            self.speakingGlowColor = color
         }
         if let raw = defaults.string(forKey: "pushToTalkKey"),
            let key = PushToTalkKey(rawValue: raw) {
