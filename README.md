@@ -51,6 +51,8 @@ Parakeet downloads on first launch. Kokoro can be downloaded from **Settings →
 
 Speak2 lives in the menu bar. Click the icon to configure your hotkeys, pick an audio device, or browse transcription history. Select text in an app and press `Cmd+Option+R` to read it aloud with the local Kokoro voice; press again to stop. This does not use or modify the clipboard.
 
+Speech starts after a small sentence-aware chunk is generated, while subsequent chunks are synthesized during playback. Word-count targets are soft: complete sentences are preserved for natural phrasing, except where Kokoro's own input limit requires splitting. Audio is queued directly as PCM rather than packaging the entire selection as a WAV. First use still includes model and phonemizer initialization.
+
 That's it. You talk, it types—and now it can talk back.
 
 ### Push-to-talk

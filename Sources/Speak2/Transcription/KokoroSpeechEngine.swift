@@ -43,14 +43,21 @@ actor KokoroSpeechEngine {
         _ = try await downloader.downloadVoice(voice)
     }
 
-    func synthesizeWAV(
+    struct AudioChunk: Sendable {
+        let samples: [Float]
+        let sampleRate: Int
+    }
+
+    func synthesize(
         text: String,
         onDownloadStatus: @MainActor @Sendable (String) -> Void,
         onDownloadComplete: @MainActor @Sendable () -> Void
-    ) async throws -> Data {
+    ) async throws -> AudioChunk {
+        try Task.checkCancellation()
         if pipeline == nil {
             try await downloadAssets(onStatus: onDownloadStatus)
             await onDownloadComplete()
+            try Task.checkCancellation()
             let configURL = supportDirectory.appendingPathComponent("config.json")
             let weightsURL = supportDirectory.appendingPathComponent("kokoro-v1_0.safetensors")
             let model = try KModel(configURL: configURL, weightsURL: weightsURL)
@@ -66,7 +73,11 @@ actor KokoroSpeechEngine {
                 NSLocalizedDescriptionKey: "Kokoro model failed to initialize."
             ])
         }
+        try Task.checkCancellation()
+        let start = ContinuousClock.now
         let result = try pipeline.synthesize(text: text, voice: voice)
-        return AudioWriter.wavData(samples: result.audio, sampleRate: result.sampleRate)
+        try Task.checkCancellation()
+        NSLog("[Kokoro] Synthesized %d characters in %@", text.count, String(describing: start.duration(to: .now)))
+        return AudioChunk(samples: result.audio, sampleRate: result.sampleRate)
     }
 }

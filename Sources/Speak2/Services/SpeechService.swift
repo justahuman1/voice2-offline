@@ -1,13 +1,24 @@
 import AVFoundation
 import AppKit
 import ApplicationServices
+import Speak2Kit
 
 @MainActor
 final class SpeechService {
     private let appState: AppState
     private let glowOverlay: GlowOverlay
-    private var player: AVAudioPlayer?
+    private var playback: SpeechPlayback?
     private var synthesisTask: Task<Void, Never>?
+    private var requestID = UUID()
+
+    func stop() {
+        requestID = UUID()
+        synthesisTask?.cancel()
+        synthesisTask = nil
+        playback?.stop()
+        playback = nil
+        glowOverlay.hide()
+    }
 
     init(appState: AppState, glowOverlay: GlowOverlay) {
         self.appState = appState
@@ -16,14 +27,8 @@ final class SpeechService {
 
     /// Stops current playback/generation, or reads and speaks the focused app's selection.
     func toggleSpeakingSelection() -> String? {
-        if let synthesisTask {
-            NSLog("[ReadSelection] Cancelling Kokoro synthesis")
-            synthesisTask.cancel()
-            return nil
-        }
-        if let player, player.isPlaying {
-            NSLog("[ReadSelection] Stopping Kokoro playback")
-            player.stop()
+        if synthesisTask != nil {
+            stop()
             return nil
         }
 
@@ -65,47 +70,58 @@ final class SpeechService {
         }
 
         NSLog("[ReadSelection] Sending %d characters to Kokoro", selectedText.count)
+        let id = UUID()
+        requestID = id
         synthesisTask = Task { [weak self] in
             guard let self else { return }
-            defer { self.synthesisTask = nil }
+            defer {
+                if self.requestID == id {
+                    self.playback?.stop()
+                    self.playback = nil
+                    self.synthesisTask = nil
+                    self.glowOverlay.hide()
+                }
+            }
             do {
                 let engine = KokoroSpeechEngine.shared
-                self.appState.kokoroModelState = await engine.isDownloaded() ? .loading : .downloading(status: "Preparing download…")
-                let wavData = try await engine.synthesizeWAV(
-                    text: selectedText,
-                    onDownloadStatus: { [weak self] status in
-                        guard let self else { return }
-                        self.appState.kokoroModelState = .downloading(status: status)
-                        self.glowOverlay.show(state: .loading, message: status)
-                    },
-                    onDownloadComplete: { [weak self] in
-                        guard let self else { return }
+                let downloaded = await engine.isDownloaded()
+                try Task.checkCancellation()
+                guard self.requestID == id else { throw CancellationError() }
+                self.appState.kokoroModelState = downloaded ? .loading : .downloading(status: "Preparing download…")
+                for text in SpeechChunks.split(selectedText) {
+                    await self.playback?.waitForCapacity()
+                    try Task.checkCancellation()
+                    let audio = try await engine.synthesize(
+                        text: text,
+                        onDownloadStatus: { [weak self] status in
+                            guard let self, self.requestID == id else { return }
+                            self.appState.kokoroModelState = .downloading(status: status)
+                            self.glowOverlay.show(state: .loading, message: status)
+                        },
+                        onDownloadComplete: { [weak self] in
+                            guard let self, self.requestID == id else { return }
+                            self.glowOverlay.hide()
+                            self.appState.kokoroModelState = .loading
+                        }
+                    )
+                    try Task.checkCancellation()
+                    guard self.requestID == id else { throw CancellationError() }
+                    if self.playback == nil {
+                        self.playback = try SpeechPlayback(sampleRate: audio.sampleRate)
                         self.glowOverlay.hide()
-                        self.appState.kokoroModelState = .loading
+                        NSLog("[ReadSelection] Kokoro PCM playback started")
                     }
-                )
-                guard !Task.isCancelled else {
-                    self.glowOverlay.hide()
+                    try self.playback?.enqueue(audio)
                     self.appState.kokoroModelState = .loaded
-                    return
                 }
-                let audioPlayer = try AVAudioPlayer(data: wavData)
-                guard audioPlayer.play() else {
-                    throw NSError(domain: "Speak2.AudioPlayback", code: 1, userInfo: [
-                        NSLocalizedDescriptionKey: "The synthesized audio could not be played."
-                    ])
-                }
-                self.player = audioPlayer
-                self.appState.kokoroModelState = .loaded
-                self.glowOverlay.hide()
-                NSLog("[ReadSelection] Kokoro playback started")
+                await self.playback?.finish()
+                try Task.checkCancellation()
             } catch is CancellationError {
-                self.glowOverlay.hide()
-                self.appState.kokoroModelState = await KokoroSpeechEngine.shared.isDownloaded() ? .downloaded : .notDownloaded
                 NSLog("[ReadSelection] Kokoro synthesis cancelled")
             } catch {
-                self.glowOverlay.hide()
-                self.appState.kokoroModelState = await KokoroSpeechEngine.shared.isDownloaded() ? .downloaded : .notDownloaded
+                let downloaded = await KokoroSpeechEngine.shared.isDownloaded()
+                guard self.requestID == id else { return }
+                self.appState.kokoroModelState = downloaded ? .downloaded : .notDownloaded
                 NSLog("[ReadSelection] Kokoro failed: %@", error.localizedDescription)
                 NotificationService.shared.showError(message: "Speech failed: \(error.localizedDescription)")
             }
