@@ -32,7 +32,9 @@ Then build and launch with:
 ./run.sh
 ```
 
-MLX's Metal shaders must be compiled by Xcode; a plain `swift build` can compile Speak2 but will fail when Kokoro runs. Setup downloads Apple's Metal Toolchain and prebuilds the dependencies; subsequent `./run.sh` calls are incremental.
+Normal runs and setup build the optimized **Release** configuration. Kokoro's Swift inference/MLX graph-building work should not be benchmarked in an unoptimized Debug build. To build and launch Debug explicitly, use `./run.sh debug`. The first Release build after switching configurations can take longer; subsequent builds are incremental. The launcher prints its configuration so timing comparisons are unambiguous.
+
+MLX's Metal shaders must be compiled by Xcode; a plain `swift build` can compile Speak2 but will fail when Kokoro runs. Setup downloads Apple's Metal Toolchain and prebuilds the dependencies.
 
 On first run, grant **Accessibility** and **Microphone** permission to the terminal app you use (System Settings > Privacy & Security).
 

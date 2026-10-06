@@ -3,8 +3,21 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+if [[ $# -gt 1 ]]; then
+    echo "Usage: $0 [setup|debug]" >&2
+    exit 2
+fi
+
+configuration=Release
+case "${1:-}" in
+    ""|setup) ;;
+    debug) configuration=Debug ;;
+    *) echo "Usage: $0 [setup|debug]" >&2; exit 2 ;;
+esac
+
 build_app() {
-    xcodebuild -quiet -scheme Speak2 -destination 'platform=macOS' -derivedDataPath .build/xcode build
+    echo "Building Speak2 ($configuration)..."
+    xcodebuild -quiet -scheme Speak2 -configuration "$configuration" -destination 'platform=macOS' -derivedDataPath .build/xcode build
 }
 
 if [[ "${1:-}" == "setup" ]]; then
@@ -16,11 +29,8 @@ if [[ "${1:-}" == "setup" ]]; then
     exit 0
 fi
 
-if [[ $# -ne 0 ]]; then
-    echo "Usage: $0 [setup]" >&2
-    exit 2
-fi
-
+# Optimize Swift inference/graph-building work for normal use; keep Debug explicit.
 # Rebuild incrementally, then launch the binary directly.
 build_app
-exec .build/xcode/Build/Products/Debug/Speak2
+echo "Launching Speak2 ($configuration)..."
+exec ".build/xcode/Build/Products/$configuration/Speak2"
