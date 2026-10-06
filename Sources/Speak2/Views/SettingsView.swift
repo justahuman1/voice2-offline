@@ -72,6 +72,10 @@ struct SettingsView: View {
                 shortcutRow("Paste Last", name: .pasteLastTranscription)
                 shortcutRow("Read Selection / Stop", name: .readSelection)
                 shortcutRow("Read Clipboard / Stop", name: .readClipboard)
+                shortcutRow("Read Screen Region / Stop", name: .readScreenRegion)
+                Text("Region OCR uses Apple Vision locally and requires Screen Recording permission. Clipboard reading never changes your clipboard.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 Picker("Push-to-Talk Key", selection: Bindable(appState).pushToTalkKey) {
                     ForEach(PushToTalkKey.allCases, id: \.self) { key in
@@ -88,6 +92,7 @@ struct SettingsView: View {
                         .pasteLastTranscription,
                         .readSelection,
                         .readClipboard,
+                        .readScreenRegion,
                     ])
                     appState.pushToTalkKey = .fn
                 }

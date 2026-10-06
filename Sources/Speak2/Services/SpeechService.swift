@@ -6,6 +6,7 @@ import Speak2Kit
 enum SpeechSource {
     case selection
     case clipboard
+    case screenRegion
 }
 
 private struct SpeechInputError: LocalizedError {
@@ -20,12 +21,15 @@ final class SpeechService {
     private var playback: SpeechPlayback?
     private var synthesisTask: Task<Void, Never>?
     private var requestID = UUID()
+    private var screenReader: ScreenTextReader?
 
     func stop() {
         guard synthesisTask != nil else { return }
         requestID = UUID()
         synthesisTask?.cancel()
         synthesisTask = nil
+        screenReader?.cancel()
+        screenReader = nil
         playback?.stop()
         playback = nil
         glowOverlay.hide()
@@ -52,42 +56,60 @@ final class SpeechService {
             return nil
         }
 
-        let selectedText: String
+        let selectedText: String?
+        let reader: ScreenTextReader?
         do {
             switch source {
             case .selection:
+                reader = nil
                 selectedText = try readSelectedText()
             case .clipboard:
+                reader = nil
                 guard let text = NSPasteboard.general.string(forType: .string),
                       !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                     return "The clipboard contains no text. Copy some text, then try again."
                 }
                 selectedText = text
+            case .screenRegion:
+                if let error = ScreenTextReader.checkPermission() { return error }
+                selectedText = nil
+                reader = ScreenTextReader()
             }
         } catch {
             return error.localizedDescription
         }
 
-        NSLog("[ReadSelection] Sending %d characters to Kokoro", selectedText.count)
+        screenReader = reader
         let id = UUID()
         requestID = id
         synthesisTask = Task { [weak self] in
             guard let self else { return }
             defer {
                 if self.requestID == id {
+                    self.screenReader?.cancel()
+                    self.screenReader = nil
                     self.playback?.stop()
                     self.playback = nil
                     self.synthesisTask = nil
                     self.glowOverlay.hide()
                 }
             }
+            var synthesisStarted = false
             do {
+                let speechText: String
+                if let selectedText { speechText = selectedText }
+                else if let reader { speechText = try await reader.readText() }
+                else { throw CancellationError() }
+                try Task.checkCancellation()
+                guard self.requestID == id else { throw CancellationError() }
+                NSLog("[ReadSpeech] Sending %d characters to Kokoro", speechText.count)
+                synthesisStarted = true
                 let engine = KokoroSpeechEngine.shared
                 let downloaded = await engine.isDownloaded()
                 try Task.checkCancellation()
                 guard self.requestID == id else { throw CancellationError() }
                 self.appState.kokoroModelState = downloaded ? .loading : .downloading(status: "Preparing download…")
-                for text in SpeechChunks.split(selectedText) {
+                for text in SpeechChunks.split(speechText) {
                     await self.playback?.waitForCapacity()
                     try Task.checkCancellation()
                     let audio = try await engine.synthesize(
@@ -110,7 +132,7 @@ final class SpeechService {
                             guard let self, self.requestID == id, self.playback != nil else { return }
                             self.glowOverlay.show(state: .speaking, glowColor: self.appState.speakingGlowColor, audioLevel: level)
                         }
-                        NSLog("[ReadSelection] Kokoro PCM playback started")
+                        NSLog("[ReadSpeech] Kokoro PCM playback started")
                     }
                     try self.playback?.enqueue(audio)
                     self.glowOverlay.show(state: .speaking, glowColor: self.appState.speakingGlowColor)
@@ -119,13 +141,16 @@ final class SpeechService {
                 await self.playback?.finish()
                 try Task.checkCancellation()
             } catch is CancellationError {
-                NSLog("[ReadSelection] Kokoro synthesis cancelled")
+                NSLog("[ReadSpeech] Read cancelled")
             } catch {
-                let downloaded = await KokoroSpeechEngine.shared.isDownloaded()
+                if synthesisStarted {
+                    let downloaded = await KokoroSpeechEngine.shared.isDownloaded()
+                    guard self.requestID == id else { return }
+                    self.appState.kokoroModelState = downloaded ? .downloaded : .notDownloaded
+                }
                 guard self.requestID == id else { return }
-                self.appState.kokoroModelState = downloaded ? .downloaded : .notDownloaded
-                NSLog("[ReadSelection] Kokoro failed: %@", error.localizedDescription)
-                NotificationService.shared.showError(message: "Speech failed: \(error.localizedDescription)")
+                NSLog("[ReadSpeech] Failed: %@", error.localizedDescription)
+                NotificationService.shared.showError(message: "Read failed: \(error.localizedDescription)")
             }
         }
         return nil

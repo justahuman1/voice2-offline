@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hotkeyManager.onReadSelection = { [weak self] in self?.handleRead(.selection) }
         hotkeyManager.onReadClipboard = { [weak self] in self?.handleRead(.clipboard) }
+        hotkeyManager.onReadScreenRegion = { [weak self] in self?.handleRead(.screenRegion) }
 
         hotkeyManager.setPushToTalkKey(appState.pushToTalkKey)
         appState.onPushToTalkKeyChanged = { [weak self] key in
@@ -54,6 +55,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             engineManager.downloadAndLoadModel(version: appState.selectedVersion)
         }
 
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        speechService.stop()
     }
 
     private func handleRead(_ source: SpeechSource) {

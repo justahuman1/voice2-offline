@@ -55,8 +55,19 @@ Speak2 lives in the menu bar. Click the icon to configure your hotkeys, pick an 
 |---|---|---|
 | Read Selection | `Cmd+Option+R` | Focused app's Accessibility selection; never touches the clipboard. |
 | Read Clipboard | `Cmd+Option+C` | Copy text yourself first, then invoke; clipboard contents are read but never changed. |
+| Read Screen Region | `Cmd+Option+O` | Drag a rectangle over visible text; Apple Vision recognizes it locally. Escape cancels. |
 
-Both commands use the same local Kokoro voice. While a read is active, either command stops it instead of starting another read. Configure shortcuts under **Settings → Keyboard Shortcuts**. Clipboard reading works with copied text from Firefox or Ghostty even when their Accessibility selection is unavailable; empty or non-text clipboards produce an error.
+All three commands use the same local Kokoro voice. While capture, OCR, generation, or playback is active, any read command cancels/stops it instead of starting another read. Configure shortcuts under **Settings → Keyboard Shortcuts**. Clipboard reading works with copied text from Firefox or Ghostty even when their Accessibility selection is unavailable; empty or non-text clipboards produce an error.
+
+### Region OCR
+
+The first OCR request asks for **Screen Recording** permission (called **Screen & System Audio Recording** on newer macOS). Enable Speak2 or its launching terminal under **System Settings → Privacy & Security**, restart if macOS requires it, and retry. No OCR model download or API key is needed.
+
+Press `Cmd+Option+O`, drag over text on one display, and release to read it. Screenshots remain in memory—nothing is saved, uploaded, or copied to the clipboard, and recognized text is not logged. Capture panels are excluded from the image. Escape, another read command, or starting a recording cancels the operation; in-flight capture/OCR may finish, but cancelled results cannot start speech.
+
+Recognition is configured for English to match the current Kokoro voice. OCR sees only visible pixels: it cannot recover off-screen selections, and complex columns, small fonts, or protected content can produce missing or misordered text. For selectable text in Firefox or Ghostty, copying and using **Read Clipboard** is usually more accurate.
+
+### Speaking status
 
 The bottom glow reacts to audio while recording or speaking. Configure **Recording** and **Speaking** colors independently under **Settings → Glow Color**; speaking defaults to purple and your existing recording color is preserved. There is no percentage or estimated remaining time, and ordinary synthesis stays visually quiet. The speaking glow stays visible between chunks and disappears when reading finishes or is stopped.
 
