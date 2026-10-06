@@ -49,11 +49,18 @@ Parakeet downloads on first launch. Kokoro can be downloaded from **Settings →
 
 ## Usage
 
-Speak2 lives in the menu bar. Click the icon to configure your hotkeys, pick an audio device, or browse transcription history. Select text in an app and press `Cmd+Option+R` to read it aloud with the local Kokoro voice; press again to stop. This does not use or modify the clipboard.
+Speak2 lives in the menu bar. Click the icon to configure your hotkeys, pick an audio device, or browse transcription history.
+
+| Read command | Default shortcut | Text source |
+|---|---|---|
+| Read Selection | `Cmd+Option+R` | Focused app's Accessibility selection; never touches the clipboard. |
+| Read Clipboard | `Cmd+Option+C` | Copy text yourself first, then invoke; clipboard contents are read but never changed. |
+
+Both commands use the same local Kokoro voice. While a read is active, either command stops it instead of starting another read. Configure shortcuts under **Settings → Keyboard Shortcuts**. Clipboard reading works with copied text from Firefox or Ghostty even when their Accessibility selection is unavailable; empty or non-text clipboards produce an error.
 
 The bottom glow reacts to audio while recording or speaking. Configure **Recording** and **Speaking** colors independently under **Settings → Glow Color**; speaking defaults to purple and your existing recording color is preserved. There is no percentage or estimated remaining time, and ordinary synthesis stays visually quiet. The speaking glow stays visible between chunks and disappears when reading finishes or is stopped.
 
-Recording takes priority: starting a recording stops speech playback and cancels pending generation. Read-selection requests are ignored while recording or transcribing. Cancellation silences playback immediately, although an in-flight model inference may finish before its result is discarded.
+Recording takes priority: starting a recording stops speech playback and cancels pending generation. Read requests are ignored while recording or transcribing. Cancellation silences playback immediately, although an in-flight model inference may finish before its result is discarded.
 
 Speech starts after a small sentence-aware chunk is generated, while subsequent chunks are synthesized during playback. Word-count targets are soft: complete sentences are preserved for natural phrasing, except where Kokoro's own input limit requires splitting. Audio is queued directly as PCM rather than packaging the entire selection as a WAV. First use still includes model and phonemizer initialization.
 

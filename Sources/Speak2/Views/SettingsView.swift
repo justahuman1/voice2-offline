@@ -71,6 +71,7 @@ struct SettingsView: View {
                 shortcutRow("Show History", name: .showHistory)
                 shortcutRow("Paste Last", name: .pasteLastTranscription)
                 shortcutRow("Read Selection / Stop", name: .readSelection)
+                shortcutRow("Read Clipboard / Stop", name: .readClipboard)
 
                 Picker("Push-to-Talk Key", selection: Bindable(appState).pushToTalkKey) {
                     ForEach(PushToTalkKey.allCases, id: \.self) { key in
@@ -86,6 +87,7 @@ struct SettingsView: View {
                         .showHistory,
                         .pasteLastTranscription,
                         .readSelection,
+                        .readClipboard,
                     ])
                     appState.pushToTalkKey = .fn
                 }

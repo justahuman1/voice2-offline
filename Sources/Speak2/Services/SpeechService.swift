@@ -3,6 +3,16 @@ import AppKit
 import ApplicationServices
 import Speak2Kit
 
+enum SpeechSource {
+    case selection
+    case clipboard
+}
+
+private struct SpeechInputError: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
+}
+
 @MainActor
 final class SpeechService {
     private let appState: AppState
@@ -35,48 +45,27 @@ final class SpeechService {
         self.glowOverlay = glowOverlay
     }
 
-    /// Stops current playback/generation, or reads and speaks the focused app's selection.
-    func toggleSpeakingSelection() -> String? {
+    /// Any read command stops an active read; otherwise acquire text from its explicit source.
+    func toggleSpeaking(_ source: SpeechSource) -> String? {
         if synthesisTask != nil {
             stop()
             return nil
         }
 
-        let isTrusted = AXIsProcessTrusted()
-        NSLog("[ReadSelection] Accessibility trusted: %@", isTrusted ? "yes" : "no")
-        guard isTrusted else {
-            return "Allow Speak2 under System Settings > Privacy & Security > Accessibility, then try again."
-        }
-        guard let app = NSWorkspace.shared.frontmostApplication else {
-            NSLog("[ReadSelection] No frontmost application")
-            return "Couldn't identify the frontmost app."
-        }
-        NSLog("[ReadSelection] Frontmost app: %@ (%@)", app.localizedName ?? "unknown", app.bundleIdentifier ?? "no bundle id")
-
-        let appElement = AXUIElementCreateApplication(app.processIdentifier)
-        var focusedElementValue: CFTypeRef?
-        let focusResult = AXUIElementCopyAttributeValue(
-            appElement,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedElementValue
-        )
-        guard focusResult == .success, let focusedElementValue else {
-            NSLog("[ReadSelection] Focused element lookup failed: %@", String(describing: focusResult))
-            return "Couldn't read the focused app. Try selecting the text again."
-        }
-
-        let focusedElement = focusedElementValue as! AXUIElement
-        var selectedTextValue: CFTypeRef?
-        let selectionResult = AXUIElementCopyAttributeValue(
-            focusedElement,
-            kAXSelectedTextAttribute as CFString,
-            &selectedTextValue
-        )
-        guard selectionResult == .success,
-              let selectedText = selectedTextValue as? String,
-              !selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            NSLog("[ReadSelection] Selected text unavailable: AXError=%@, value type=%@", String(describing: selectionResult), String(describing: selectedTextValue.map { type(of: $0) }))
-            return "Couldn't access selected text in this app. Nothing was copied to the clipboard."
+        let selectedText: String
+        do {
+            switch source {
+            case .selection:
+                selectedText = try readSelectedText()
+            case .clipboard:
+                guard let text = NSPasteboard.general.string(forType: .string),
+                      !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    return "The clipboard contains no text. Copy some text, then try again."
+                }
+                selectedText = text
+            }
+        } catch {
+            return error.localizedDescription
         }
 
         NSLog("[ReadSelection] Sending %d characters to Kokoro", selectedText.count)
@@ -140,5 +129,46 @@ final class SpeechService {
             }
         }
         return nil
+    }
+
+    private func readSelectedText() throws -> String {
+        let isTrusted = AXIsProcessTrusted()
+        NSLog("[ReadSelection] Accessibility trusted: %@", isTrusted ? "yes" : "no")
+        guard isTrusted else {
+            throw SpeechInputError(message: "Allow Speak2 under System Settings > Privacy & Security > Accessibility, then try again.")
+        }
+        guard let app = NSWorkspace.shared.frontmostApplication else {
+            NSLog("[ReadSelection] No frontmost application")
+            throw SpeechInputError(message: "Couldn't identify the frontmost app.")
+        }
+        NSLog("[ReadSelection] Frontmost app: %@ (%@)", app.localizedName ?? "unknown", app.bundleIdentifier ?? "no bundle id")
+
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        var focusedElementValue: CFTypeRef?
+        let focusResult = AXUIElementCopyAttributeValue(
+            appElement,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedElementValue
+        )
+        guard focusResult == .success, let focusedElementValue else {
+            NSLog("[ReadSelection] Focused element lookup failed: %@", String(describing: focusResult))
+            throw SpeechInputError(message: "Couldn't read the focused app. Try selecting the text again.")
+        }
+
+        let focusedElement = focusedElementValue as! AXUIElement
+        var selectedTextValue: CFTypeRef?
+        let selectionResult = AXUIElementCopyAttributeValue(
+            focusedElement,
+            kAXSelectedTextAttribute as CFString,
+            &selectedTextValue
+        )
+        guard selectionResult == .success,
+              let selectedText = selectedTextValue as? String,
+              !selectedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            NSLog("[ReadSelection] Selected text unavailable: AXError=%@, value type=%@", String(describing: selectionResult), String(describing: selectedTextValue.map { type(of: $0) }))
+            throw SpeechInputError(message: "Couldn't access selected text in this app. Nothing was copied to the clipboard.")
+        }
+
+        return selectedText
     }
 }

@@ -36,19 +36,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self, let text = self.appState.recentTranscription else { return }
             PasteService.pasteAtCursor(text, autoPasteEnabled: true)
         }
-        hotkeyManager.onReadSelection = { [weak self] in
-            NSLog("[ReadSelection] Hotkey fired")
-            guard let self else { return }
-            // Recording/transcription owns the overlay; TTS never interrupts it.
-            guard self.appState.recordingState != .recording,
-                  self.appState.recordingState != .processing,
-                  self.loadingIndicatorTask == nil else { return }
-            self.cancelTransientTimer()
-            self.appState.recordingState = .idle
-            if let error = self.speechService.toggleSpeakingSelection() {
-                NotificationService.shared.showError(message: error)
-            }
-        }
+        hotkeyManager.onReadSelection = { [weak self] in self?.handleRead(.selection) }
+        hotkeyManager.onReadClipboard = { [weak self] in self?.handleRead(.clipboard) }
 
         hotkeyManager.setPushToTalkKey(appState.pushToTalkKey)
         appState.onPushToTalkKeyChanged = { [weak self] key in
@@ -65,6 +54,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             engineManager.downloadAndLoadModel(version: appState.selectedVersion)
         }
 
+    }
+
+    private func handleRead(_ source: SpeechSource) {
+        // Recording/transcription owns the overlay; TTS never interrupts it.
+        guard appState.recordingState != .recording,
+              appState.recordingState != .processing,
+              loadingIndicatorTask == nil else { return }
+        cancelTransientTimer()
+        appState.recordingState = .idle
+        if let error = speechService.toggleSpeaking(source) {
+            NotificationService.shared.showError(message: error)
+        }
     }
 
     // MARK: - State Machine

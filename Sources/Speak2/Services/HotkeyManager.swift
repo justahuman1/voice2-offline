@@ -7,7 +7,8 @@ extension KeyboardShortcuts.Name {
     static let pushToTalk = Self("pushToTalk")
     static let showHistory = Self("showHistory")
     static let pasteLastTranscription = Self("pasteLastTranscription")
-    static let readSelection = Self("readSelection")
+    static let readSelection = Self("readSelection", default: .init(.r, modifiers: [.command, .option]))
+    static let readClipboard = Self("readClipboard", default: .init(.c, modifiers: [.command, .option]))
 }
 
 @MainActor
@@ -18,6 +19,7 @@ final class HotkeyManager {
     var onShowHistory: (() -> Void)?
     var onPasteLastTranscription: (() -> Void)?
     var onReadSelection: (() -> Void)?
+    var onReadClipboard: (() -> Void)?
     var onEscapePressed: (() -> Void)?
 
     private var escapeMonitor: Any?
@@ -31,7 +33,6 @@ final class HotkeyManager {
         KeyboardShortcuts.setShortcut(.init(.x, modifiers: [.command, .option, .shift]), for: .pushToTalk)
         KeyboardShortcuts.setShortcut(.init(.a, modifiers: [.command, .option]), for: .showHistory)
         KeyboardShortcuts.setShortcut(.init(.v, modifiers: [.command, .option]), for: .pasteLastTranscription)
-        KeyboardShortcuts.setShortcut(.init(.r, modifiers: [.command, .option]), for: .readSelection)
 
         KeyboardShortcuts.onKeyUp(for: .toggleRecording) { [weak self] in
             self?.onToggleRecording?()
@@ -53,6 +54,9 @@ final class HotkeyManager {
         }
         KeyboardShortcuts.onKeyUp(for: .readSelection) { [weak self] in
             self?.onReadSelection?()
+        }
+        KeyboardShortcuts.onKeyUp(for: .readClipboard) { [weak self] in
+            self?.onReadClipboard?()
         }
     }
 
