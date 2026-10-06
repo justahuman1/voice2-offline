@@ -15,6 +15,7 @@ final class ScreenRegionSelector {
     func select() async -> ScreenRegion? {
         await withCheckedContinuation { continuation in
             self.continuation = continuation
+            NSLog("[ScreenOCR] Opening region selector: displays=%ld", NSScreen.screens.count)
             for screen in NSScreen.screens {
                 guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { continue }
                 let panel = RegionPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -29,6 +30,7 @@ final class ScreenRegionSelector {
                     guard let self else { return }
                     guard let rect,
                           let source = ScreenRegionGeometry.captureRect(selection: rect, displaySize: screen.frame.size) else {
+                        NSLog("[ScreenOCR] Selection dismissed or smaller than two points")
                         self.cancel()
                         return
                     }
@@ -42,6 +44,8 @@ final class ScreenRegionSelector {
                     panel.makeFirstResponder(view)
                 }
             }
+            NSLog("[ScreenOCR] Region panels shown=%ld; keyPanel=%@", panels.count,
+                  panels.contains(where: { $0.isKeyWindow }) ? "yes" : "no")
             if panels.isEmpty { finish(nil) }
         }
     }
@@ -74,6 +78,7 @@ private final class RegionSelectionView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        NSLog("[ScreenOCR] Region drag started")
         window?.makeKey()
         window?.makeFirstResponder(self)
         start = convert(event.locationInWindow, from: nil)
@@ -95,7 +100,10 @@ private final class RegionSelectionView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 { onFinish?(nil) }
+        if event.keyCode == 53 {
+            NSLog("[ScreenOCR] Escape cancelled region selection")
+            onFinish?(nil)
+        }
         else { super.keyDown(with: event) }
     }
 

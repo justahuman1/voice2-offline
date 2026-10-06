@@ -64,6 +64,10 @@ final class HotkeyManager {
         KeyboardShortcuts.onKeyUp(for: .readScreenRegion) { [weak self] in
             self?.onReadScreenRegion?()
         }
+        NSLog("[ReadSpeech] Read shortcuts: selection=%@ clipboard=%@ screenRegion=%@",
+              KeyboardShortcuts.getShortcut(for: .readSelection)?.description ?? "disabled",
+              KeyboardShortcuts.getShortcut(for: .readClipboard)?.description ?? "disabled",
+              KeyboardShortcuts.getShortcut(for: .readScreenRegion)?.description ?? "disabled")
     }
 
     func setPushToTalkKey(_ key: PushToTalkKey) {

@@ -62,13 +62,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleRead(_ source: SpeechSource) {
+        NSLog("[ReadSpeech] Shortcut received: source=%@ recordingState=%@ loadingIndicator=%@",
+              String(describing: source), String(describing: appState.recordingState),
+              loadingIndicatorTask == nil ? "inactive" : "active")
         // Recording/transcription owns the overlay; TTS never interrupts it.
         guard appState.recordingState != .recording,
               appState.recordingState != .processing,
-              loadingIndicatorTask == nil else { return }
+              loadingIndicatorTask == nil else {
+            NSLog("[ReadSpeech] Request ignored: recording/transcription/loading owns the overlay")
+            return
+        }
         cancelTransientTimer()
         appState.recordingState = .idle
         if let error = speechService.toggleSpeaking(source) {
+            NSLog("[ReadSpeech] Input rejected: %@", error)
             NotificationService.shared.showError(message: error)
         }
     }

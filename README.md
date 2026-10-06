@@ -67,6 +67,12 @@ Press `Cmd+Option+O`, drag over text on one display, and release to read it. Scr
 
 Recognition is configured for English to match the current Kokoro voice. OCR sees only visible pixels: it cannot recover off-screen selections, and complex columns, small fonts, or protected content can produce missing or misordered text. For selectable text in Firefox or Ghostty, copying and using **Read Clipboard** is usually more accurate.
 
+#### Debugging region OCR
+
+Quit the existing Speak2 process, launch `./run.sh` from your terminal, and reproduce with the configured OCR shortcut (default `Cmd+Option+O`). Terminal logs tagged `[ReadSpeech]` show shortcut registration, received/ignored requests, and playback; `[ScreenOCR]` traces permission, region selection, ScreenCaptureKit metadata/capture, and Vision recognition. Failures include the stage, error domain/code, and elapsed time. These diagnostics never log screenshots, recognized text, window titles, or clipboard contents.
+
+If permission is denied despite the Settings toggle, restart both Speak2 and the launching terminal before retrying. Logged process/parent metadata helps identify the launch context but does not authoritatively identify which app macOS attributes the permission to. Share only the `[ScreenOCR]` and `[ReadSpeech]` lines for troubleshooting.
+
 ### Speaking status
 
 The bottom glow reacts to audio while recording or speaking. Configure **Recording** and **Speaking** colors independently under **Settings → Glow Color**; speaking defaults to purple and your existing recording color is preserved. There is no percentage or estimated remaining time, and ordinary synthesis stays visually quiet. The speaking glow stays visible between chunks and disappears when reading finishes or is stopped.

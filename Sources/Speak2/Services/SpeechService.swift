@@ -52,6 +52,7 @@ final class SpeechService {
     /// Any read command stops an active read; otherwise acquire text from its explicit source.
     func toggleSpeaking(_ source: SpeechSource) -> String? {
         if synthesisTask != nil {
+            NSLog("[ReadSpeech] Read command stops the active request; no new input acquired")
             stop()
             return nil
         }
@@ -149,7 +150,9 @@ final class SpeechService {
                     self.appState.kokoroModelState = downloaded ? .downloaded : .notDownloaded
                 }
                 guard self.requestID == id else { return }
-                NSLog("[ReadSpeech] Failed: %@", error.localizedDescription)
+                let failure = error as NSError
+                NSLog("[ReadSpeech] Failed: domain=%@ code=%ld description=%@",
+                      failure.domain, failure.code, failure.localizedDescription)
                 NotificationService.shared.showError(message: "Read failed: \(error.localizedDescription)")
             }
         }
