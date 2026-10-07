@@ -15,6 +15,10 @@ case "${1:-}" in
     *) echo "Usage: $0 [setup|debug]" >&2; exit 2 ;;
 esac
 
+# Checkout the revision recorded by this repository, never the moving upstream branch.
+# No --force: preserve/refuse conflicts with local dependency edits.
+git submodule update --init --recursive -- Vendor/kokoro-swift
+
 build_app() {
     echo "Building Speak2 ($configuration)..."
     xcodebuild -quiet -scheme Speak2 -configuration "$configuration" -destination 'platform=macOS' -derivedDataPath .build/xcode build

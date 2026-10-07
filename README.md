@@ -18,7 +18,18 @@ https://github.com/user-attachments/assets/3bbdbff9-a87c-42c9-9029-6540bf22ec9d
 
 ## Install
 
-Requires macOS 14+ and Swift 5.9+.
+Requires macOS 14+ on Apple Silicon, Swift 5.10+, and Xcode with Metal toolchain support.
+
+Clone with the pinned Kokoro submodule:
+
+```bash
+git clone --recurse-submodules https://github.com/justahuman1/voice2-offline.git
+cd voice2-offline
+```
+
+For an existing clone, use `git submodule update --init --recursive` after checkout/pull. `run.sh` also initializes/checks out the recorded submodule revision automatically before building; it never follows upstream HEAD. Initialize submodules explicitly before invoking `swift test` or Xcode directly.
+
+When upgrading from the earlier vendored PR snapshot, ignored build metadata can leave `Vendor/kokoro-swift` nonempty after pull. If Git refuses to initialize into that directory, move the leftover directory to a backup location and retry submodule initialization; do not force-delete local dependency edits.
 
 Run setup once to install Xcode's Metal Toolchain and perform the slow initial build:
 
@@ -37,6 +48,12 @@ Normal runs and setup build the optimized **Release** configuration. Kokoro's Sw
 MLX's Metal shaders must be compiled by Xcode; a plain `swift build` can compile Speak2 but will fail when Kokoro runs. Setup downloads Apple's Metal Toolchain and prebuilds the dependencies.
 
 On first run, grant **Accessibility** and **Microphone** permission to the terminal app you use (System Settings > Privacy & Security).
+
+### Kokoro source dependency
+
+`Vendor/kokoro-swift` is an unmodified Git submodule of [mweinbach/kokoro-swift](https://github.com/mweinbach/kokoro-swift), pinned to [`20bf04c506e913ff129d7d2229398180ba24c690`](https://github.com/mweinbach/kokoro-swift/tree/20bf04c506e913ff129d7d2229398180ba24c690) (0.1.0). Keeping the upstream checkout local lets SwiftPM resolve its bundled `Packages/Misaki` dependency without copying the pronunciation dictionaries or inference source into Speak2. No fork or upstream packaging change is required.
+
+Updates are deliberate dependency bumps: fetch upstream in the submodule, check out a reviewed commit, rebuild/test, and commit the updated `Vendor/kokoro-swift` pointer. Do not edit dependency files or use `git submodule update --remote` as part of normal setup.
 
 ## Models
 
