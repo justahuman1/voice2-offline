@@ -1,0 +1,3 @@
+[submodule "kokoro-swift"]
+	path = Vendor/kokoro-swift
+	url = https://github.com/mweinbach/kokoro-swift.git

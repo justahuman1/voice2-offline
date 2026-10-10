@@ -14,6 +14,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", exact: "1.8.0"),
         .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.13.2"),
+        .package(path: "Vendor/kokoro-swift"),
         .package(url: "https://github.com/swiftlang/swift-testing.git", from: "0.12.0"),
     ],
     targets: [
@@ -23,6 +24,7 @@ let package = Package(
                 "Speak2Kit",
                 "KeyboardShortcuts",
                 "FluidAudio",
+                .product(name: "Kokoro", package: "kokoro-swift"),
             ],
             path: "Sources/Speak2"
         ),

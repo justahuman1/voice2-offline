@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var engineManager = EngineManager(appState: appState)
     private let glowOverlay = GlowOverlay()
     private let hotkeyManager = HotkeyManager()
+    private lazy var speechService = SpeechService(appState: appState, glowOverlay: glowOverlay)
     private var transientTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -35,6 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self, let text = self.appState.recentTranscription else { return }
             PasteService.pasteAtCursor(text, autoPasteEnabled: true)
         }
+        hotkeyManager.onReadSelection = { [weak self] in self?.handleRead(.selection) }
+        hotkeyManager.onReadClipboard = { [weak self] in self?.handleRead(.clipboard) }
+        hotkeyManager.onReadScreenRegion = { [weak self] in self?.handleRead(.screenRegion) }
 
         hotkeyManager.setPushToTalkKey(appState.pushToTalkKey)
         appState.onPushToTalkKeyChanged = { [weak self] key in
@@ -51,6 +55,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             engineManager.downloadAndLoadModel(version: appState.selectedVersion)
         }
 
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        speechService.stop()
+    }
+
+    private func handleRead(_ source: SpeechSource) {
+        NSLog("[ReadSpeech] Shortcut received: source=%@ recordingState=%@ loadingIndicator=%@",
+              String(describing: source), String(describing: appState.recordingState),
+              loadingIndicatorTask == nil ? "inactive" : "active")
+        // Recording/transcription owns the overlay; TTS never interrupts it.
+        guard appState.recordingState != .recording,
+              appState.recordingState != .processing,
+              loadingIndicatorTask == nil else {
+            NSLog("[ReadSpeech] Request ignored: recording/transcription/loading owns the overlay")
+            return
+        }
+        cancelTransientTimer()
+        appState.recordingState = .idle
+        if let error = speechService.toggleSpeaking(source) {
+            NSLog("[ReadSpeech] Input rejected: %@", error)
+            NotificationService.shared.showError(message: error)
+        }
     }
 
     // MARK: - State Machine
@@ -116,6 +143,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Recording Flow
 
     private func startRecording() {
+        // Recording wins, including when speech is still generating its first chunk.
+        cancelTransientTimer()
+        speechService.stop()
         guard appState.engineLoadingState == .loaded else {
             showLoadingIndicator()
             return

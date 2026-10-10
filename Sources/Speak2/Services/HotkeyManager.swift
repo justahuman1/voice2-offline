@@ -7,6 +7,9 @@ extension KeyboardShortcuts.Name {
     static let pushToTalk = Self("pushToTalk")
     static let showHistory = Self("showHistory")
     static let pasteLastTranscription = Self("pasteLastTranscription")
+    static let readSelection = Self("readSelection", default: .init(.r, modifiers: [.command, .option]))
+    static let readClipboard = Self("readClipboard", default: .init(.c, modifiers: [.command, .option]))
+    static let readScreenRegion = Self("readScreenRegion", default: .init(.o, modifiers: [.command, .option]))
 }
 
 @MainActor
@@ -16,10 +19,14 @@ final class HotkeyManager {
     var onPushToTalkUp: (() -> Void)?
     var onShowHistory: (() -> Void)?
     var onPasteLastTranscription: (() -> Void)?
+    var onReadSelection: (() -> Void)?
+    var onReadClipboard: (() -> Void)?
+    var onReadScreenRegion: (() -> Void)?
     var onEscapePressed: (() -> Void)?
 
     private var escapeMonitor: Any?
     private var pttMonitor: Any?
+    private var localPTTMonitor: Any?
     private var pttDown = false
     private var pttKey: PushToTalkKey = .none
 
@@ -48,6 +55,19 @@ final class HotkeyManager {
         KeyboardShortcuts.onKeyUp(for: .pasteLastTranscription) { [weak self] in
             self?.onPasteLastTranscription?()
         }
+        KeyboardShortcuts.onKeyUp(for: .readSelection) { [weak self] in
+            self?.onReadSelection?()
+        }
+        KeyboardShortcuts.onKeyUp(for: .readClipboard) { [weak self] in
+            self?.onReadClipboard?()
+        }
+        KeyboardShortcuts.onKeyUp(for: .readScreenRegion) { [weak self] in
+            self?.onReadScreenRegion?()
+        }
+        NSLog("[ReadSpeech] Read shortcuts: selection=%@ clipboard=%@ screenRegion=%@",
+              KeyboardShortcuts.getShortcut(for: .readSelection)?.description ?? "disabled",
+              KeyboardShortcuts.getShortcut(for: .readClipboard)?.description ?? "disabled",
+              KeyboardShortcuts.getShortcut(for: .readScreenRegion)?.description ?? "disabled")
     }
 
     func setPushToTalkKey(_ key: PushToTalkKey) {
@@ -57,17 +77,29 @@ final class HotkeyManager {
             NSEvent.removeMonitor(monitor)
             pttMonitor = nil
         }
+        if let monitor = localPTTMonitor {
+            NSEvent.removeMonitor(monitor)
+            localPTTMonitor = nil
+        }
         guard key != .none else { return }
         pttMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            guard let self else { return }
-            let pressed = self.isKeyPressed(key, event: event)
-            if pressed && !self.pttDown {
-                self.pttDown = true
-                self.onPushToTalkDown?()
-            } else if !pressed && self.pttDown {
-                self.pttDown = false
-                self.onPushToTalkUp?()
-            }
+            self?.handlePushToTalkFlags(event, key: key)
+        }
+        // Global monitors omit our own events; region panels can be key without activating the app.
+        localPTTMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.handlePushToTalkFlags(event, key: key)
+            return event
+        }
+    }
+
+    private func handlePushToTalkFlags(_ event: NSEvent, key: PushToTalkKey) {
+        let pressed = isKeyPressed(key, event: event)
+        if pressed && !pttDown {
+            pttDown = true
+            onPushToTalkDown?()
+        } else if !pressed && pttDown {
+            pttDown = false
+            onPushToTalkUp?()
         }
     }
 

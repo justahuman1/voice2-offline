@@ -5,6 +5,7 @@ import Speak2Kit
 enum OverlayState {
     case loading
     case recording
+    case speaking
     case processing
     case done
     case error
@@ -34,6 +35,7 @@ final class GlowOverlay {
     private var coreLayer: CAGradientLayer?
     private var textLayer: CATextLayer?
     private var smoothedLevel: CGFloat = 0.0
+    private var presentationID = UUID()
 
     private static func shiftedColor(_ color: NSColor) -> NSColor {
         let c = color.usingColorSpace(.deviceRGB) ?? color
@@ -42,7 +44,13 @@ final class GlowOverlay {
         return NSColor(hue: fmod(h + hueShift, 1.0), saturation: s, brightness: b, alpha: a)
     }
 
-    func show(state: OverlayState, glowColor: GlowColor = .cyan, audioLevel: CGFloat = 0.0) {
+    func show(
+        state: OverlayState,
+        glowColor: GlowColor = .cyan,
+        audioLevel: CGFloat = 0.0,
+        message: String? = nil
+    ) {
+        presentationID = UUID()
         setupWindowIfNeeded()
         repositionToMainScreen()
 
@@ -54,7 +62,7 @@ final class GlowOverlay {
         switch state {
         case .loading:
             color = NSColor(red: 0.6, green: 0.6, blue: 0.7, alpha: 1.0)
-        case .recording:
+        case .recording, .speaking:
             color = glowColor.nsColor
         case .processing:
             color = NSColor(red: 1.0, green: 0.69, blue: 0.125, alpha: 1.0)
@@ -91,7 +99,7 @@ final class GlowOverlay {
             pulse.repeatCount = .infinity
             core.add(pulse, forKey: "pulse")
 
-        case .recording:
+        case .recording, .speaking:
             let level = min(max(audioLevel, 0.0), 1.0)
             // Smooth the level for the bloom layer (trailing glow)
             smoothedLevel += (level - smoothedLevel) * 0.3
@@ -171,11 +179,15 @@ final class GlowOverlay {
             break
         }
 
+        if state == .loading {
+            textLayer?.string = message ?? "Loading model…"
+        }
         textLayer?.isHidden = state != .loading
         window.orderFront(nil)
     }
 
     func hide() {
+        presentationID = UUID()
         smoothedLevel = 0.0
         bloomLayer?.removeAllAnimations()
         coreLayer?.removeAllAnimations()
@@ -186,6 +198,13 @@ final class GlowOverlay {
         guard let core = coreLayer, let bloom = bloomLayer else { return }
         core.removeAllAnimations()
         bloom.removeAllAnimations()
+
+        let id = presentationID
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            guard let self, self.presentationID == id else { return }
+            self.window?.orderOut(nil)
+        }
 
         let coreFade = CABasicAnimation(keyPath: "opacity")
         coreFade.fromValue = core.opacity
@@ -203,9 +222,7 @@ final class GlowOverlay {
         bloomFade.fillMode = .forwards
         bloom.add(bloomFade, forKey: "fadeOut")
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.window?.orderOut(nil)
-        }
+        CATransaction.commit()
     }
 
     private func setupWindowIfNeeded() {
