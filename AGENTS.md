@@ -5,22 +5,23 @@ macOS menu-bar speech-to-text app. Record via global hotkey, transcribe on-devic
 ## Build & Run
 
 ```bash
-swift build
-.build/debug/Speak2     # must run the binary directly, NOT swift run
+./run.sh
 ```
 
-**Do not use `swift run`** — it runs the binary as a child process, which prevents `NSStatusItem` from rendering in the menu bar. Always run the binary directly.
+`run.sh` builds with `xcodebuild` and executes the binary directly. `./run.sh setup` installs the Metal Toolchain and performs the slow initial MLX build; later builds are incremental. MLX requires Xcode to compile its Metal shaders; plain `swift build` omits the metallib and Kokoro fails at runtime.
+
+**Do not use `swift run`** — it runs the binary as a child process, which prevents `NSStatusItem` from rendering in the menu bar.
 
 Requires Terminal to have Accessibility permission (System Settings > Privacy > Accessibility) for global hotkeys and paste simulation.
 
-There is a `run.sh` that wraps the binary in a `.app` bundle — avoid it for development. The ad-hoc code signature changes on every rebuild, breaking Accessibility permission grants.
+`build.sh` wraps the binary in a `.app` bundle; avoid it for development. The ad-hoc code signature changes on every rebuild, breaking Accessibility permission grants.
 
 ## Design Principles
 
 - **Keep it simple.** Prefer the dumbest thing that works. Avoid layered abstractions, fallback chains, and "clever" solutions. Three lines of obvious code beats a two-path strategy.
 - **No fragile timing.** Avoid `sleep`, `usleep`, `DispatchQueue.asyncAfter` as load-bearing correctness mechanisms. If something only works with a delay, the approach is wrong.
-- **Minimal dependencies.** Only KeyboardShortcuts and FluidAudio. No SwiftUI app lifecycle — raw NSApplication + AppDelegate.
-- **No .app bundle required.** Runs as a bare SPM executable via `swift run`. Menu bar icon works with `.accessory` activation policy.
+- **Dependencies.** KeyboardShortcuts, FluidAudio, and Kokoro/MLX for local text-to-speech. No SwiftUI app lifecycle — raw NSApplication + AppDelegate.
+- **No .app bundle required.** `run.sh` launches the Xcode-built executable directly. Menu bar icon works with `.accessory` activation policy.
 
 ## Architecture
 
